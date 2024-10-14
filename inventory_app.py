@@ -54,28 +54,33 @@ def process_barcode(scanner):
                 else:
                     barcode += key[-1]  # Add the last character of the key name
 
-# Function to toggle the item state between 'in' and 'out' or add it to inventory
 def toggle_item_state(barcode):
-    conn = get_db_connection()
+    print(f"Toggling item state for barcode: {barcode}")  # Debugging output
+    conn = get_db_connection()  # Open a connection to the database
     cursor = conn.cursor()
 
-    cursor.execute("SELECT status FROM inventory WHERE barcode = ?", (barcode,))
-    row = cursor.fetchone()
-    
-    if row is None:
-        # If the item is not in the database, mark it as 'in'
-        status = 'in'
-        cursor.execute("INSERT INTO inventory (barcode, status) VALUES (?, ?)", (barcode, status))
-        print(f"Item with barcode {barcode} is marked as {status}.")
-    else:
-        # If the item exists, toggle its status
-        current_status = row[0]
-        new_status = 'out' if current_status == 'in' else 'in'
-        cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
-        print(f"Item with barcode {barcode} is now marked as {new_status}.")
+    try:
+        cursor.execute("SELECT status FROM inventory WHERE barcode = ?", (barcode,))
+        row = cursor.fetchone()
 
-    conn.commit()
-    conn.close()
+        if row is None:
+            # If the item is not in the database, mark it as 'in'
+            status = 'in'
+            cursor.execute("INSERT INTO inventory (barcode, status) VALUES (?, ?)", (barcode, status))
+            print(f"Item with barcode {barcode} is marked as {status}.")
+        else:
+            # If the item exists, toggle its status
+            current_status = row[0]
+            new_status = 'out' if current_status == 'in' else 'in'
+            cursor.execute("UPDATE inventory SET status = ?, timestamp = CURRENT_TIMESTAMP WHERE barcode = ?", (new_status, barcode))
+            print(f"Item with barcode {barcode} is now marked as {new_status}.")
+
+        conn.commit()  # Commit the changes
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()  # Ensure the connection is closed whether or not an error occurred
+
 
 # Flask route to display inventory
 @app.route('/')
