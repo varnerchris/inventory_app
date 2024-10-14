@@ -131,6 +131,6 @@ if __name__ == "__main__":
     # Start the barcode processing in a separate thread
     threading.Thread(target=process_barcode, args=(scanner,), daemon=True).start()
 
-    # Start Flask app
+    # Start Flask app with eventlet for WebSocket support
     print("Ready to scan items...")
-    socketio.run(app, host='0.0.0.0', port=5000)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=False)
