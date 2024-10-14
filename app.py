@@ -108,7 +108,7 @@ if __name__ == "__main__":
     # Assign the first device found (adjust if needed)
     for device in devices:
         print(f"Device found: {device.path} {device.name}")
-        scanner = evdev.InputDevice(device.path)
+        scanner =  evdev.InputDevice('/dev/input/event3')
         break  # Use the first scanner found
 
     if not scanner:
