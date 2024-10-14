@@ -39,13 +39,11 @@
         <tr>
             <th>Barcode</th>
             <th>Status</th>
-            <th>Action</th>
         </tr>
         {% for item in items %}
         <tr class="{{ item['status'] }}">
             <td>{{ item['barcode'] }}</td>
             <td>{{ item['status'] }}</td>
-            <td><a href="{{ url_for('toggle', barcode=item['barcode']) }}">Toggle</a></td>
         </tr>
         {% endfor %}
     </table>
