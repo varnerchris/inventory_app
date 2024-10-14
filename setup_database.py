@@ -6,13 +6,14 @@ cursor = conn.cursor()
 
 # Create the inventory table
 cursor.execute('''
-CREATE TABLE inventory (
+CREATE TABLE IF NOT EXISTS inventory (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     barcode TEXT NOT NULL UNIQUE,
-    status TEXT NOT NULL CHECK (status IN ('in', 'out'))
+    status TEXT NOT NULL CHECK (status IN ('in', 'out')),
+    checked_out_by TEXT,  -- New column for the name of the person checking out
+    checkout_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP  -- New column for the checkout timestamp
 )
 ''')
-
 # Commit the changes and close the connection
 conn.commit()
 conn.close()

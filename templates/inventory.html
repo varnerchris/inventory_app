@@ -3,49 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventory Status</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-        }
-        h1 {
-            color: #333;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .available {
-            background-color: #c8e6c9; /* Light green */
-        }
-        .checked-out {
-            background-color: #ffcdd2; /* Light red */
-        }
-    </style>
+    <title>Inventory</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </head>
 <body>
-    <h1>Inventory</h1>
-    <table>
-        <tr>
-            <th>Barcode</th>
-            <th>Status</th>
-        </tr>
-        {% for item in items %}
-        <tr class="{{ item['status'] }}">
-            <td>{{ item['barcode'] }}</td>
-            <td>{{ item['status'] }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+    <div class="container mt-5">
+        <h1>Inventory</h1>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Barcode</th>
+                    <th>Status</th>
+                    <th>Checked Out By</th>
+                    <th>Checkout Timestamp</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item['barcode'] }}</td>
+                    <td>{{ item['status'] }}</td>
+                    <td>{{ item['checked_out_by'] }}</td>
+                    <td>{{ item['checkout_timestamp'] }}</td>
+                    <td>
+                        {% if item['status'] == 'in' %}
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#checkoutModal" onclick="setBarcode('{{ item['barcode'] }}')">
+                                Check Out
+                            </button>
+                        {% else %}
+                            <button disabled>Checked Out</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="checkoutModal" tabindex="-1" role="dialog" aria-labelledby="checkoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="checkoutModalLabel">Check Out Item</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="checkoutForm" method="POST">
+                    <div class="modal-body">
+                        <p>Enter your name:</p>
+                        <input type="text" name="checked_out_by" required class="form-control">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Check Out</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setBarcode(barcode) {
+            document.getElementById('checkoutForm').action = '/toggle/' + barcode;
+        }
+    </script>
 </body>
 </html>
