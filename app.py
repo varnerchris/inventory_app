@@ -5,6 +5,10 @@ import time
 from flask import Flask, render_template, request, redirect, url_for
 from flask_socketio import SocketIO, emit
 import threading
+from gevent import monkey
+
+# Apply monkey patching to allow gevent to work with other libraries
+monkey.patch_all()
 
 # Initialize Flask app and SocketIO
 app = Flask(__name__)
@@ -14,27 +18,17 @@ socketio = SocketIO(app)
 def initialize_database():
     conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
-
-    # Create the inventory table
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS inventory (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        barcode TEXT NOT NULL UNIQUE,
-        status TEXT NOT NULL CHECK (status IN ('in', 'out'))
-    )
-    ''')
-
-    # Create checkout_log table
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS checkout_log (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        barcode TEXT NOT NULL,
-        checked_out_by TEXT NOT NULL,
-        timestamp REAL NOT NULL
-    )
-    ''')
-
-    conn.commit()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='inventory';")
+    table_exists = cursor.fetchone()
+    if table_exists is None:
+        print("Table 'inventory' does not exist. Running setup_database.py...")
+        try:
+            subprocess.run(['python3', 'setup_database.py'], check=True)
+            print("setup_database.py executed successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"Error running setup_database.py: {e}")
+    else:
+        print("Table 'inventory' already exists.")
     conn.close()
 
 # Initialize the database
@@ -70,7 +64,6 @@ def toggle_item_state(barcode, checked_out_by=None):
                            (barcode, checked_out_by, time.time()))
 
         conn.commit()
-        # Emit the scanned barcode to all connected clients
         socketio.emit('barcode_scanned', {'barcode': barcode, 'checked_out_by': checked_out_by})
     except Exception as e:
         print(f"Error toggling item state for barcode {barcode}: {e}")
@@ -98,30 +91,15 @@ def toggle(barcode):
     toggle_item_state(barcode, checked_out_by)
     return redirect(url_for('inventory'))
 
-# Function to process barcode input
-def process_barcode(scanner):
-    barcode = ''
-    for event in scanner.read_loop():
-        if event.type == evdev.ecodes.EV_KEY:
-            key_event = evdev.categorize(event)
-            if key_event.keystate == key_event.key_down:
-                key = evdev.ecodes.KEY[key_event.scancode]
-                if key == 'KEY_ENTER':
-                    socketio.emit('scan', barcode)
-                    barcode = ''  # Reset for the next scan
-                else:
-                    barcode += key[-1]  # Append the character to the barcode
-
 # Main execution flow
 if __name__ == "__main__":
     # Detect barcode scanner
     devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
     scanner = None
 
-    # Assign the correct event device (make sure this is the right one)
     for device in devices:
         print(f"Device found: {device.path} {device.name}")
-        if device.path == '/dev/input/event3':  # Change this if necessary
+        if device.path == '/dev/input/event3':  # Ensure this is the correct event device
             scanner = device
             break
 
@@ -131,6 +109,6 @@ if __name__ == "__main__":
     # Start the barcode processing in a separate thread
     threading.Thread(target=process_barcode, args=(scanner,), daemon=True).start()
 
-    # Start Flask app with eventlet for WebSocket support
+    # Start Flask app with gevent for WebSocket support
     print("Ready to scan items...")
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
