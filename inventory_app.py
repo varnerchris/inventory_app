@@ -2,6 +2,29 @@ import sqlite3
 import evdev
 import time
 
+# Function to check if the inventory table exists, and run setup_database.py if not
+def initialize_database():
+    conn = sqlite3.connect('inventory.db')
+    cursor = conn.cursor()
+
+    # Check if the 'inventory' table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='inventory';")
+    table_exists = cursor.fetchone()
+
+    if table_exists is None:
+        print("Table 'inventory' does not exist. Running setup_database.py...")
+        
+        # Run the setup_database.py script
+        try:
+            subprocess.run(['python3', 'setup_database.py'], check=True)
+            print("setup_database.py executed successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"Error running setup_database.py: {e}")
+    else:
+        print("Table 'inventory' already exists.")
+
+    conn.close()
+
 # Connect to SQLite database
 conn = sqlite3.connect('inventory.db')
 cursor = conn.cursor()
