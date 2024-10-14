@@ -1,6 +1,8 @@
 import sqlite3
+import subprocess
 import evdev
 import time
+
 
 # Function to check if the inventory table exists, and run setup_database.py if not
 def initialize_database():
