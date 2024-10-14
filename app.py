@@ -2,7 +2,8 @@ import sqlite3
 import subprocess
 import evdev
 import time
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, redirect, url_for
+import threading
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -39,25 +40,11 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# Function to process barcode scan
-def process_barcode(scanner):
-    barcode = ''
-    for event in scanner.read_loop():
-        if event.type == evdev.ecodes.EV_KEY:
-            key_event = evdev.categorize(event)
-            if key_event.keystate == key_event.key_down:
-                key = evdev.ecodes.KEY[key_event.scancode]
-                if key == 'KEY_ENTER':
-                    print(f"Barcode scanned: {barcode}")
-                    toggle_item_state(barcode)
-                    barcode = ''  # Reset barcode for next scan
-                else:
-                    barcode += key[-1]  # Add the last character of the key name
-
+# Function to toggle the item state between 'in' and 'out'
 def toggle_item_state(barcode):
     try:
         print(f"Toggling item state for barcode: {barcode}")  # Debugging output
-        conn = get_db_connection()  # Make sure this function is defined correctly
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Check if the item exists in the database
@@ -83,6 +70,20 @@ def toggle_item_state(barcode):
     finally:
         conn.close()  # Ensure connection is closed after operations
 
+# Function to process barcode scan
+def process_barcode(scanner):
+    barcode = ''
+    for event in scanner.read_loop():
+        if event.type == evdev.ecodes.EV_KEY:
+            key_event = evdev.categorize(event)
+            if key_event.keystate == key_event.key_down:
+                key = evdev.ecodes.KEY[key_event.scancode]
+                if key == 'KEY_ENTER':
+                    print(f"Barcode scanned: {barcode}")  # Debugging output
+                    toggle_item_state(barcode)  # Process the scanned barcode
+                    barcode = ''  # Reset for the next scan
+                else:
+                    barcode += key[-1]  # Add the last character of the key name
 
 # Flask route to display inventory
 @app.route('/')
@@ -113,20 +114,9 @@ if __name__ == "__main__":
     if not scanner:
         raise Exception("No barcode scanner found!")
 
-    # Start the barcode processing in a separate thread or use Flask for the web interface
-    print("Ready to scan items...")
+    # Start the barcode processing in a separate thread
+    threading.Thread(target=process_barcode, args=(scanner,), daemon=True).start()
     
     # Start Flask app
+    print("Ready to scan items...")
     app.run(host='0.0.0.0', port=5000)
-
-    # Call the barcode processing function in a loop if desired
-    try:
-        process_barcode(scanner)
-
-    except KeyboardInterrupt:
-        print("Exiting program...")
-
-    finally:
-        # Cleanup
-        if scanner:
-            scanner.close()  # Close scanner if opened
