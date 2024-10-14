@@ -2,25 +2,21 @@ import sqlite3
 import subprocess
 import evdev
 import time
-from flask import Flask, render_template, redirect, url_for
-import threading
+from flask import Flask, render_template, request, redirect, url_for
+from flask_socketio import SocketIO, emit
 
-# Initialize Flask app
+# Initialize Flask app and SocketIO
 app = Flask(__name__)
+socketio = SocketIO(app)
 
-# Function to check if the inventory table exists, and run setup_database.py if not
+# Function to check if the inventory table exists
 def initialize_database():
     conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
-
-    # Check if the 'inventory' table exists
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='inventory';")
     table_exists = cursor.fetchone()
-
     if table_exists is None:
         print("Table 'inventory' does not exist. Running setup_database.py...")
-        
-        # Run the setup_database.py script
         try:
             subprocess.run(['python3', 'setup_database.py'], check=True)
             print("setup_database.py executed successfully.")
@@ -28,7 +24,6 @@ def initialize_database():
             print(f"Error running setup_database.py: {e}")
     else:
         print("Table 'inventory' already exists.")
-
     conn.close()
 
 # Initialize the database
@@ -40,50 +35,43 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# Function to toggle the item state between 'in' and 'out'
-def toggle_item_state(barcode):
+# Function to toggle item state
+def toggle_item_state(barcode, checked_out_by=None):
     try:
-        print(f"Toggling item state for barcode: {barcode}")  # Debugging output
+        print(f"Toggling item state for barcode: {barcode}")
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        # Check if the item exists in the database
         cursor.execute("SELECT status FROM inventory WHERE barcode = ?", (barcode,))
         row = cursor.fetchone()
-        print(f"Database lookup for barcode {barcode}: {row}")  # Debugging output
 
         if row is None:
-            # If the item is not in the database, mark it as 'in'
             status = 'in'
             cursor.execute("INSERT INTO inventory (barcode, status) VALUES (?, ?)", (barcode, status))
-            print(f"Inserted barcode {barcode} with status {status}.")  # Debugging output
+            print(f"Inserted barcode {barcode} with status {status}.")
         else:
-            # If the item exists, toggle its status
             current_status = row[0]
             new_status = 'out' if current_status == 'in' else 'in'
             cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
-            print(f"Updated barcode {barcode} to new status {new_status}.")  # Debugging output
+            print(f"Updated barcode {barcode} to new status {new_status}.")
+
+        if checked_out_by:
+            # Optionally log who checked out the item
+            cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp) VALUES (?, ?, ?)",
+                           (barcode, checked_out_by, time.time()))
 
         conn.commit()
+        # Emit the scanned barcode to all connected clients
+        socketio.emit('barcode_scanned', {'barcode': barcode, 'checked_out_by': checked_out_by})
     except Exception as e:
-        print(f"Error toggling item state for barcode {barcode}: {e}")  # Catch and print any errors
+        print(f"Error toggling item state for barcode {barcode}: {e}")
     finally:
-        conn.close()  # Ensure connection is closed after operations
+        conn.close()
 
-# Function to process barcode scan
-def process_barcode(scanner):
-    barcode = ''
-    for event in scanner.read_loop():
-        if event.type == evdev.ecodes.EV_KEY:
-            key_event = evdev.categorize(event)
-            if key_event.keystate == key_event.key_down:
-                key = evdev.ecodes.KEY[key_event.scancode]
-                if key == 'KEY_ENTER':
-                    print(f"Barcode scanned: {barcode}")  # Debugging output
-                    toggle_item_state(barcode)  # Process the scanned barcode
-                    barcode = ''  # Reset for the next scan
-                else:
-                    barcode += key[-1]  # Add the last character of the key name
+# WebSocket event for handling barcode scans
+@socketio.on('scan')
+def handle_scan(barcode):
+    print(f"Received scan for barcode: {barcode}")
+    toggle_item_state(barcode)
 
 # Flask route to display inventory
 @app.route('/')
@@ -94,10 +82,12 @@ def inventory():
     return render_template('inventory.html', items=items)
 
 # Flask route to toggle item status via a web interface
-@app.route('/toggle/<barcode>')
+@app.route('/toggle/<barcode>', methods=['POST'])
 def toggle(barcode):
-    toggle_item_state(barcode)
+    checked_out_by = request.form.get('checked_out_by')
+    toggle_item_state(barcode, checked_out_by)
     return redirect(url_for('inventory'))
+
 
 # Main execution flow
 if __name__ == "__main__":
