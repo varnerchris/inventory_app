@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .available {
+            background-color: #c8e6c9; /* Light green */
+        }
+        .checked-out {
+            background-color: #ffcdd2; /* Light red */
+        }
+    </style>
+</head>
+<body>
+    <h1>Inventory Status</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Item Barcode</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+                <tr class="{{ 'available' if item[1] == 'in' else 'checked-out' }}">
+                    <td>{{ item[0] }}</td>
+                    <td>{{ item[1] }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
