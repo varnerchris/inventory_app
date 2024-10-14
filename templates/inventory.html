@@ -4,87 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
 </head>
 <body>
-    <div class="container mt-5">
-        <h1>Inventory</h1>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Barcode</th>
-                    <th>Status</th>
-                    <th>Checked Out By</th>
-                    <th>Checkout Timestamp</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                <tr>
-                    <td>{{ item['barcode'] }}</td>
-                    <td>{{ item['status'] }}</td>
-                    <td>{{ item['checked_out_by'] }}</td>
-                    <td>{{ item['checkout_timestamp'] }}</td>
-                    <td>
-                        {% if item['status'] == 'in' %}
-                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#checkoutModal" onclick="setBarcode('{{ item['barcode'] }}')">
-                                Check Out
-                            </button>
-                        {% else %}
-                            <button disabled>Checked Out</button>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    <div class="container">
+        <h1>Inventory System</h1>
 
-    <!-- Modal -->
-    <div class="modal fade" id="checkoutModal" tabindex="-1" role="dialog" aria-labelledby="checkoutModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="checkoutModalLabel">Check Out Item</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <form id="checkoutForm" method="POST">
+        <!-- Modal for User Input -->
+        <div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="checkoutModalLabel">Enter Your Name</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
                     <div class="modal-body">
-                        <p>Enter your name:</p>
-                        <input type="text" name="checked_out_by" required class="form-control">
+                        <form id="checkoutForm">
+                            <div class="mb-3">
+                                <label for="nameInput" class="form-label">Name</label>
+                                <input type="text" class="form-control" id="nameInput" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                        </form>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary">Check Out</button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
     <script>
-        function setBarcode(barcode) {
-            document.getElementById('checkoutForm').action = '/toggle/' + barcode;
-        }
-    </script>
-    <script>
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
-    
+        var socket = io();
+
+        // Listen for the 'barcode_scanned' event
         socket.on('barcode_scanned', function(data) {
-            // Show the modal
-            $('#checkoutModal').modal('show');
-            // Set the barcode in the modal's form action
-            document.getElementById('checkoutForm').action = '/toggle/' + data.barcode;
-            // Optionally, display the name of the person checking it out
-            console.log("Barcode scanned:", data.barcode);
+            console.log("DEBUG: Barcode scanned received:", data);
+            
+            // Show the modal when an item is scanned
+            var myModal = new bootstrap.Modal(document.getElementById('checkoutModal'), {
+                keyboard: false
+            });
+            myModal.show();
+        });
+
+        // Handle form submission inside modal
+        document.getElementById('checkoutForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            var name = document.getElementById('nameInput').value;
+
+            // Send the name to the server via POST or WebSocket
+            console.log("DEBUG: Name submitted:", name);
+
+            // You can emit a WebSocket event or send an AJAX request here
+            // For example: socket.emit('submit_name', { name: name });
+
+            // Close the modal
+            var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
+            myModal.hide();
         });
     </script>
 </body>
