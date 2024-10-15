@@ -86,43 +86,34 @@ def toggle_item_state(barcode, checked_out_by=None):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        # Check if the item exists in the inventory
         cursor.execute("SELECT status FROM inventory WHERE barcode = ?", (barcode,))
         row = cursor.fetchone()
 
-        # If item does not exist, add it with 'in' status
         if row is None:
-            print(f"DEBUG: Adding new item to inventory: {barcode}")
-            status = 'in'  # Default status for new items
+            status = 'in'
             cursor.execute("INSERT INTO inventory (barcode, status) VALUES (?, ?)", (barcode, status))
-            conn.commit()  # Commit after adding the new item
-            print(f"DEBUG: New item added with status 'in': {barcode}")
-        
-        # If item exists, toggle the status
+            print(f"DEBUG: Adding new item to inventory: {barcode}")
         else:
             current_status = row[0]
             new_status = 'out' if current_status == 'in' else 'in'
             cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
-            
-            # Log the checkout or check-in
-            if checked_out_by:
-                timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-                action = 'checkout' if new_status == 'out' else 'checkin'
-                
-                cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp, action) VALUES (?, ?, ?, ?)",
-                               (barcode, checked_out_by, timestamp, action))
+            print(f"DEBUG: Toggling item state: {barcode} to {new_status}")
 
-            # Emit updated inventory to all connected clients
-            socketio.emit('update_inventory', get_inventory_data(), broadcast=True)
+        if checked_out_by and new_status == 'out':
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp) VALUES (?, ?, ?)",
+                           (barcode, checked_out_by, timestamp))
 
         conn.commit()
+
+        # Emit updated inventory to all connected clients
+        socketio.emit('update_inventory', get_inventory_data(), broadcast=True)
         
     except Exception as e:
         print(f"Error toggling item state for barcode {barcode}: {e}")
-        
     finally:
         conn.close()
+
 
 
 
@@ -172,6 +163,30 @@ def inventory():
     print("DEBUG: Items fetched from database:", items_list)
 
     return render_template('inventory.html', items=items_list)
+
+# Function to retrieve inventory data from the database
+def get_inventory_data():
+    conn = get_db_connection()
+    items = conn.execute('''
+        SELECT i.barcode, i.status, l.checked_out_by, l.timestamp 
+        FROM inventory i
+        LEFT JOIN checkout_log l ON i.barcode = l.barcode 
+        ORDER BY l.timestamp DESC
+    ''').fetchall()
+    
+    # Convert to a list of dictionaries for easier manipulation on the client
+    inventory_items = []
+    for item in items:
+        inventory_items.append({
+            'barcode': item['barcode'],
+            'status': item['status'],
+            'checked_out_by': item['checked_out_by'],
+            'checkout_timestamp': item['timestamp']
+        })
+    
+    conn.close()
+    return inventory_items
+
 
 
 # Main execution flow
