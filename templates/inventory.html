@@ -59,7 +59,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
     <script>
         var socket = io();
-
+    
         // Listen for the 'barcode_scanned' event
         socket.on('barcode_scanned', function(data) {
             console.log("DEBUG: Barcode Scanned:", data);
@@ -67,10 +67,10 @@
             // Check if data is valid
             if (data && data.barcode) {
                 console.log("DEBUG: Data received is valid, showing modal...");
-                
+    
                 // Set the scanned barcode to a hidden input field
                 document.getElementById('scannedBarcode').value = data.barcode;
-
+    
                 // Show the modal when an item is scanned
                 var myModal = new bootstrap.Modal(document.getElementById('checkoutModal'), {
                     keyboard: false
@@ -80,49 +80,57 @@
                 console.log("DEBUG: Invalid data received for barcode scan.");
             }
         });
-
+    
         // Handle form submission inside modal
         document.getElementById('checkoutForm').addEventListener('submit', function(event) {
             event.preventDefault();
             var name = document.getElementById('nameInput').value;
             var barcode = document.getElementById('scannedBarcode').value;
-
+    
             // Send the name and barcode to the server via WebSocket
             console.log("DEBUG: Name submitted:", name, "Barcode:", barcode);
             
             // Emit the name and barcode back to the server
             socket.emit('submit_name', { barcode: barcode, checked_out_by: name });
-
+    
             // Close the modal
             var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
             myModal.hide();
         });
-
-       // Function to update the inventory table dynamically
-function updateInventoryTable(items) {
-    var tableBody = document.getElementById('inventoryTable');
-    tableBody.innerHTML = ''; // Clear existing rows
-
-    // Create a Set to track already added barcodes
-    var addedBarcodes = new Set();
-
-    items.forEach(function(item) {
-        // Check if this barcode has already been added
-        if (!addedBarcodes.has(item.barcode)) {
-            addedBarcodes.add(item.barcode); // Mark this barcode as added
-            var row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${item.barcode}</td>
-                <td>${item.status}</td>
-                <td>${item.checked_out_by || 'N/A'}</td>
-                <td>${item.checkout_timestamp || 'N/A'}</td>
-            `;
-            tableBody.appendChild(row);
+    
+        // Function to update the inventory table dynamically
+        function updateInventoryTable(items) {
+            var tableBody = document.getElementById('inventoryTable');
+            tableBody.innerHTML = ''; // Clear existing rows
+    
+            // Create a Set to track already added barcodes
+            var addedBarcodes = new Set();
+    
+            items.forEach(function(item) {
+                // Check if this barcode has already been added
+                if (!addedBarcodes.has(item.barcode)) {
+                    addedBarcodes.add(item.barcode); // Mark this barcode as added
+                    var row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.barcode}</td>
+                        <td>${item.status}</td>
+                        <td>${item.checked_out_by || 'N/A'}</td>
+                        <td>${item.timestamp || 'N/A'}</td>
+                    `;
+                    tableBody.appendChild(row);
+                }
+            });
         }
-    });
-}
-
-
+    
+        // Listen for inventory updates from the server
+        socket.on('update_inventory', function(data) {
+            console.log("DEBUG: Inventory updated:", data);
+            updateInventoryTable(data.items); // Update the table with new inventory data
+        });
     </script>
+    
+    <!-- Add a hidden input field for the scanned barcode -->
+    <input type="hidden" id="scannedBarcode" value="">
+    
 </body>
 </html>
