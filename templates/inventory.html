@@ -11,26 +11,17 @@
         <h1>Inventory System</h1>
 
         <!-- Inventory Table -->
-        <table class="table table-striped">
+        <table class="table">
             <thead>
                 <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Barcode</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Checked Out By</th>
-                    <th scope="col">Timestamp</th>
+                    <th>Barcode</th>
+                    <th>Status</th>
+                    <th>Checked Out By</th>
+                    <th>Timestamp</th>
                 </tr>
             </thead>
-            <tbody>
-                {% for item in items %}
-                <tr>
-                    <th scope="row">{{ item.id }}</th>
-                    <td>{{ item.barcode }}</td>
-                    <td>{{ item.status }}</td>
-                    <td>{{ item.checked_out_by or 'N/A' }}</td>  <!-- Display N/A if no one has checked out -->
-                    <td>{{ item.timestamp or 'N/A' }}</td>  <!-- Display N/A if no timestamp exists -->
-                </tr>
-                {% endfor %}
+            <tbody id="inventoryTable">
+                <!-- Rows populated dynamically -->
             </tbody>
         </table>
 
@@ -60,20 +51,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
     <script>
         var socket = io();
-        var currentBarcode = null;
 
         // Listen for the 'barcode_scanned' event
         socket.on('barcode_scanned', function(data) {
-            console.log("DEBUG: Barcode scanned received:", data);
-
-            // Save the current barcode for later use
-            currentBarcode = data.barcode;
+            console.log("DEBUG: Barcode Scanned:", data);
             
-            // Show the modal when an item is scanned
-            var myModal = new bootstrap.Modal(document.getElementById('checkoutModal'), {
-                keyboard: false
-            });
-            myModal.show();
+            // Check if data is valid
+            if (data && data.barcode) {
+                console.log("DEBUG: Data received is valid, showing modal...");
+                
+                // Show the modal when an item is scanned
+                var myModal = new bootstrap.Modal(document.getElementById('checkoutModal'), {
+                    keyboard: false
+                });
+                myModal.show();
+            } else {
+                console.log("DEBUG: Invalid data received for barcode scan.");
+            }
         });
 
         // Handle form submission inside modal
@@ -81,27 +75,38 @@
             event.preventDefault();
             var name = document.getElementById('nameInput').value;
 
-            // Send the name and barcode to the server via POST
-            console.log("DEBUG: Name submitted:", name, "Barcode:", currentBarcode);
-            fetch('/submit_name', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ barcode: currentBarcode, checked_out_by: name })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('Inventory updated successfully');
-                } else {
-                    console.error('Error updating inventory:', data.error);
-                }
-            });
+            // Send the name to the server via WebSocket
+            console.log("DEBUG: Name submitted:", name);
+            
+            // Emit the name back to the server along with the scanned barcode
+            socket.emit('submit_name', { name: name });
 
             // Close the modal
             var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
             myModal.hide();
+        });
+
+        // Function to update the inventory table dynamically
+        function updateInventoryTable(items) {
+            var tableBody = document.getElementById('inventoryTable');
+            tableBody.innerHTML = '';
+
+            items.forEach(function(item) {
+                var row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.barcode}</td>
+                    <td>${item.status}</td>
+                    <td>${item.checked_out_by || 'N/A'}</td>
+                    <td>${item.checkout_timestamp || 'N/A'}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Listen for inventory updates from the server
+        socket.on('update_inventory', function(data) {
+            console.log("DEBUG: Inventory updated:", data);
+            updateInventoryTable(data.items);
         });
     </script>
 </body>
