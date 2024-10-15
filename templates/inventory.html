@@ -91,28 +91,29 @@
             myModal.hide();
         });
 
-        // Listen for 'update_inventory' event
-        socket.on('update_inventory', function(data) {
-            console.log("DEBUG: Inventory updated:", data);
-            updateInventoryTable(data.items);
-        });
+        // Function to update the inventory table dynamically
+function updateInventoryTable(items) {
+    var tableBody = document.getElementById('inventoryTable');
+    tableBody.innerHTML = ''; // Clear existing rows
 
-        // Update inventory table dynamically
-        function updateInventoryTable(items) {
-            var tableBody = document.getElementById('inventoryTable');
-            tableBody.innerHTML = ''; // Clear the table first
+    items.forEach(function(item) {
+        var row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${item.barcode}</td>
+            <td>${item.status}</td>
+            <td>${item.checked_out_by || 'N/A'}</td>
+            <td>${item.timestamp || 'N/A'}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
 
-            items.forEach(function(item) {
-                var row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.barcode}</td>
-                    <td>${item.status}</td>
-                    <td>${item.checked_out_by || 'N/A'}</td>
-                    <td>${item.checkout_timestamp || 'N/A'}</td>
-                `;
-                tableBody.appendChild(row);
-            });
-        }
+// Listen for inventory updates from the server
+socket.on('update_inventory', function(data) {
+    console.log("DEBUG: Inventory updated:", data);
+    updateInventoryTable(data.items);
+});
+
     </script>
 </body>
 </html>
