@@ -22,8 +22,10 @@ CREATE TABLE IF NOT EXISTS checkout_log (
     barcode TEXT NOT NULL,
     checked_out_by TEXT NOT NULL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    action TEXT NOT NULL CHECK (action IN ('checkout', 'checkin'))  -- Add the action column
-)
+    action TEXT NOT NULL CHECK (action IN ('checkout', 'checkin', 'create')),  -- Add 'create' to the action options
+    FOREIGN KEY (barcode) REFERENCES inventory(barcode)
+);
+
 ''')
 
 
