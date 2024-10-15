@@ -50,11 +50,16 @@ def process_barcode(scanner):
                 # When 'Enter' key is detected, barcode is complete
                 if key == 'KEY_ENTER':
                     print(f"DEBUG: Barcode scanned: {barcode}")
+                    
+                    # Emit the scanned barcode to all connected clients
+                    socketio.emit('barcode_scanned', {'barcode': barcode})
+                    
                     toggle_item_state(barcode)  # Process the scanned barcode
                     barcode = ''  # Reset for the next scan
                 else:
                     # Add key to barcode string
                     barcode += key[-1]
+
 
 # Function to toggle item state
 def toggle_item_state(barcode, checked_out_by=None):
@@ -91,7 +96,7 @@ def toggle_item_state(barcode, checked_out_by=None):
     finally:
         conn.close()
 
-        
+
 # WebSocket event for handling barcode scans
 @socketio.on('scan')
 def handle_scan(barcode):
@@ -149,6 +154,7 @@ def submit_name():
     
     finally:
         conn.close()
+
 
 # Main execution flow
 if __name__ == "__main__":

@@ -38,6 +38,7 @@
                             <div class="mb-3">
                                 <label for="nameInput" class="form-label">Name</label>
                                 <input type="text" class="form-control" id="nameInput" required>
+                                <input type="hidden" id="scannedBarcode">
                             </div>
                             <button type="submit" class="btn btn-primary">Submit</button>
                         </form>
@@ -60,6 +61,9 @@
             if (data && data.barcode) {
                 console.log("DEBUG: Data received is valid, showing modal...");
                 
+                // Set the scanned barcode to a hidden input field
+                document.getElementById('scannedBarcode').value = data.barcode;
+
                 // Show the modal when an item is scanned
                 var myModal = new bootstrap.Modal(document.getElementById('checkoutModal'), {
                     keyboard: false
@@ -74,22 +78,29 @@
         document.getElementById('checkoutForm').addEventListener('submit', function(event) {
             event.preventDefault();
             var name = document.getElementById('nameInput').value;
+            var barcode = document.getElementById('scannedBarcode').value;
 
-            // Send the name to the server via WebSocket
-            console.log("DEBUG: Name submitted:", name);
+            // Send the name and barcode to the server via WebSocket
+            console.log("DEBUG: Name submitted:", name, "Barcode:", barcode);
             
-            // Emit the name back to the server along with the scanned barcode
-            socket.emit('submit_name', { name: name });
+            // Emit the name and barcode back to the server
+            socket.emit('submit_name', { barcode: barcode, checked_out_by: name });
 
             // Close the modal
             var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
             myModal.hide();
         });
 
-        // Function to update the inventory table dynamically
+        // Listen for 'update_inventory' event
+        socket.on('update_inventory', function(data) {
+            console.log("DEBUG: Inventory updated:", data);
+            updateInventoryTable(data.items);
+        });
+
+        // Update inventory table dynamically
         function updateInventoryTable(items) {
             var tableBody = document.getElementById('inventoryTable');
-            tableBody.innerHTML = '';
+            tableBody.innerHTML = ''; // Clear the table first
 
             items.forEach(function(item) {
                 var row = document.createElement('tr');
@@ -102,12 +113,6 @@
                 tableBody.appendChild(row);
             });
         }
-
-        // Listen for inventory updates from the server
-        socket.on('update_inventory', function(data) {
-            console.log("DEBUG: Inventory updated:", data);
-            updateInventoryTable(data.items);
-        });
     </script>
 </body>
 </html>
