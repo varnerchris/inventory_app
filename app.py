@@ -86,34 +86,44 @@ def toggle_item_state(barcode, checked_out_by=None):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # Check if the item exists in the inventory
         cursor.execute("SELECT status FROM inventory WHERE barcode = ?", (barcode,))
         row = cursor.fetchone()
 
+        # If item does not exist, add it with 'in' status
         if row is None:
-            status = 'in'
+            print(f"DEBUG: Adding new item to inventory: {barcode}")
+            status = 'in'  # Default status for new items
             cursor.execute("INSERT INTO inventory (barcode, status) VALUES (?, ?)", (barcode, status))
+            conn.commit()  # Commit after adding the new item
+            print(f"DEBUG: New item added with status 'in': {barcode}")
+        
+        # If item exists, toggle the status
         else:
             current_status = row[0]
             new_status = 'out' if current_status == 'in' else 'in'
             cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
-
+            
+            # Log the checkout or check-in
             if checked_out_by:
                 timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-                
-                # Determine action based on new status
                 action = 'checkout' if new_status == 'out' else 'checkin'
                 
                 cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp, action) VALUES (?, ?, ?, ?)",
                                (barcode, checked_out_by, timestamp, action))
 
-                # Emit updated inventory to all connected clients
-                socketio.emit('update_inventory', get_inventory_data(), broadcast=True)
+            # Emit updated inventory to all connected clients
+            socketio.emit('update_inventory', get_inventory_data(), broadcast=True)
 
         conn.commit()
+        
     except Exception as e:
         print(f"Error toggling item state for barcode {barcode}: {e}")
+        
     finally:
         conn.close()
+
 
 
 # WebSocket event for handling barcode scans
