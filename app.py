@@ -134,16 +134,30 @@ def handle_submit_name(data):
 @app.route('/')
 def inventory():
     conn = get_db_connection()
-    items = conn.execute('''
+    items = conn.execute(''' 
         SELECT i.id, i.barcode, i.status, l.checked_out_by, l.timestamp 
         FROM inventory i
         LEFT JOIN checkout_log l ON i.barcode = l.barcode 
         ORDER BY l.timestamp DESC
     ''').fetchall()
+
+    # Convert items from sqlite3.Row to a list of dictionaries
+    items_list = []
+    for item in items:
+        items_list.append({
+            'id': item['id'],
+            'barcode': item['barcode'],
+            'status': item['status'],
+            'checked_out_by': item['checked_out_by'],
+            'timestamp': item['timestamp']
+        })
+
     conn.close()
     
-    print(f"DEBUG: Items fetched from database: {items}")  # Add this line
-    return render_template('inventory.html', items=items)
+    # Print the items for debugging
+    print("DEBUG: Items fetched from database:", items_list)
+
+    return render_template('inventory.html', items=items_list)
 
 
 # Main execution flow
