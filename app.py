@@ -149,11 +149,21 @@ def handle_submit_name(data):
 @app.route('/')
 def inventory():
     conn = get_db_connection()
+    
+    # Query to get only the most recent checkout_log entry for each barcode
     items = conn.execute(''' 
-        SELECT i.id, i.barcode, i.status, l.checked_out_by, l.timestamp 
+        SELECT i.id, i.barcode, i.status, l.checked_out_by, l.timestamp
         FROM inventory i
-        LEFT JOIN checkout_log l ON i.barcode = l.barcode 
-        ORDER BY l.timestamp DESC
+        LEFT JOIN (
+            SELECT barcode, checked_out_by, timestamp
+            FROM checkout_log
+            WHERE timestamp = (
+                SELECT MAX(timestamp)
+                FROM checkout_log AS sublog
+                WHERE sublog.barcode = checkout_log.barcode
+            )
+        ) l ON i.barcode = l.barcode
+        ORDER BY l.timestamp DESC;
     ''').fetchall()
 
     # Convert items from sqlite3.Row to a list of dictionaries
@@ -173,6 +183,7 @@ def inventory():
     print("DEBUG: Items fetched from database:", items_list)
 
     return render_template('inventory.html', items=items_list)
+
 
 def get_inventory_data():
     conn = get_db_connection()
