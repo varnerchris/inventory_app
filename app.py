@@ -101,18 +101,21 @@ def toggle_item_state(barcode, checked_out_by=None):
 
         if checked_out_by and new_status == 'out':
             timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-            cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp) VALUES (?, ?, ?)",
-                           (barcode, checked_out_by, timestamp))
+            # Include the action in the insert statement
+            action = 'checkout'  # You could also use 'checkin' based on your logic
+            cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp, action) VALUES (?, ?, ?, ?)",
+                           (barcode, checked_out_by, timestamp, action))
 
         conn.commit()
 
         # Emit updated inventory to all connected clients
         socketio.emit('update_inventory', get_inventory_data(), broadcast=True)
-        
+
     except Exception as e:
         print(f"Error toggling item state for barcode {barcode}: {e}")
     finally:
         conn.close()
+
 
 
 
