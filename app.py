@@ -82,7 +82,6 @@ def process_barcode(scanner):
                     barcode += key[-1]
 
 # Function to toggle item state
-# Function to toggle item state
 def toggle_item_state(barcode, checked_out_by=None):
     try:
         conn = get_db_connection()
@@ -101,10 +100,13 @@ def toggle_item_state(barcode, checked_out_by=None):
             cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
             print(f"DEBUG: Toggling item {barcode} to status {new_status}")
 
-        if checked_out_by:
-            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-            cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp) VALUES (?, ?, ?)",
-                           (barcode, checked_out_by, timestamp))
+       if checked_out_by:
+    timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+    # Assuming you want to log an action like 'checkout' when an item is checked out
+    action = 'checkout'  # or whatever action is appropriate
+    cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp, action) VALUES (?, ?, ?, ?)",
+                   (barcode, checked_out_by, timestamp, action))
+
 
         conn.commit()
 
