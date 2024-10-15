@@ -22,11 +22,10 @@ CREATE TABLE IF NOT EXISTS checkout_log (
     barcode TEXT NOT NULL,
     checked_out_by TEXT NOT NULL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    action TEXT NOT NULL CHECK (action IN ('checkout', 'checkin')) 
+    action TEXT NOT NULL CHECK (action IN ('checkout', 'checkin'))  -- Add the action column
 )
 ''')
 
-''')
 
 # Commit the changes and close the connection
 conn.commit()
