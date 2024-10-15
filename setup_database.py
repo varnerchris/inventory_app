@@ -4,18 +4,30 @@ import sqlite3
 conn = sqlite3.connect('inventory.db')
 cursor = conn.cursor()
 
-# Create the inventory table
+# Create the inventory table if it doesn't exist
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS inventory (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     barcode TEXT NOT NULL UNIQUE,
     status TEXT NOT NULL CHECK (status IN ('in', 'out')),
-    checked_out_by TEXT,  -- New column for the name of the person checking out
-    checkout_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP  -- New column for the checkout timestamp
+    checked_out_by TEXT,  -- Column for the name of the person checking out
+    checkout_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP  -- Column for the checkout timestamp
 )
 ''')
+
+# Create the checkout_log table to track check-ins and check-outs
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS checkout_log (
+    log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    barcode TEXT NOT NULL,
+    checked_out_by TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    action TEXT NOT NULL CHECK (action IN ('checked_out', 'checked_in'))
+)
+''')
+
 # Commit the changes and close the connection
 conn.commit()
 conn.close()
 
-print("Inventory table created successfully.")
+print("Inventory and checkout_log tables created successfully.")
