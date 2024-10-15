@@ -97,20 +97,24 @@ def toggle_item_state(barcode, checked_out_by=None):
             new_status = 'out' if current_status == 'in' else 'in'
             cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
 
-        if checked_out_by:
-            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-            cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp) VALUES (?, ?, ?)",
-                           (barcode, checked_out_by, timestamp))
+            if checked_out_by:
+                timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+                
+                # Determine action based on new status
+                action = 'checkout' if new_status == 'out' else 'checkin'
+                
+                cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp, action) VALUES (?, ?, ?, ?)",
+                               (barcode, checked_out_by, timestamp, action))
+
+                # Emit updated inventory to all connected clients
+                socketio.emit('update_inventory', get_inventory_data(), broadcast=True)
 
         conn.commit()
-
-        # Emit updated inventory to all connected clients
-        socketio.emit('update_inventory', get_inventory_data(), broadcast=True)
-        
     except Exception as e:
         print(f"Error toggling item state for barcode {barcode}: {e}")
     finally:
         conn.close()
+
 
 # WebSocket event for handling barcode scans
 @socketio.on('scan')

@@ -18,12 +18,14 @@ CREATE TABLE IF NOT EXISTS inventory (
 # Create the checkout_log table to track check-ins and check-outs
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS checkout_log (
-    log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     barcode TEXT NOT NULL,
     checked_out_by TEXT NOT NULL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    action TEXT NOT NULL CHECK (action IN ('checked_out', 'checked_in'))
+    action TEXT NOT NULL CHECK (action IN ('checkout', 'checkin')) 
 )
+''')
+
 ''')
 
 # Commit the changes and close the connection
