@@ -59,7 +59,6 @@ def process_barcode(scanner):
 # Function to toggle item state
 def toggle_item_state(barcode, checked_out_by=None):
     try:
-        print(f"DEBUG: Toggling item state for barcode: {barcode}")
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT status FROM inventory WHERE barcode = ?", (barcode,))
@@ -68,26 +67,31 @@ def toggle_item_state(barcode, checked_out_by=None):
         if row is None:
             status = 'in'
             cursor.execute("INSERT INTO inventory (barcode, status) VALUES (?, ?)", (barcode, status))
-            print(f"Inserted barcode {barcode} with status {status}.")
         else:
             current_status = row[0]
             new_status = 'out' if current_status == 'in' else 'in'
             cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
-            print(f"Updated barcode {barcode} to new status {new_status}.")
 
         if checked_out_by:
-            # Optionally log who checked out the item
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
             cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp) VALUES (?, ?, ?)",
-                           (barcode, checked_out_by, time.time()))
+                           (barcode, checked_out_by, timestamp))
+
+            # Emit update to all connected clients
+            socketio.emit('update_table', {
+                'barcode': barcode,
+                'status': new_status,
+                'checked_out_by': checked_out_by,
+                'timestamp': timestamp
+            })
 
         conn.commit()
-        # Emit the scanned barcode to all connected clients
-        socketio.emit('barcode_scanned', {'barcode': barcode, 'checked_out_by': checked_out_by})
     except Exception as e:
         print(f"Error toggling item state for barcode {barcode}: {e}")
     finally:
         conn.close()
 
+        
 # WebSocket event for handling barcode scans
 @socketio.on('scan')
 def handle_scan(barcode):
