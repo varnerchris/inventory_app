@@ -141,7 +141,10 @@ def inventory():
         ORDER BY l.timestamp DESC
     ''').fetchall()
     conn.close()
+    
+    print(f"DEBUG: Items fetched from database: {items}")  # Add this line
     return render_template('inventory.html', items=items)
+
 
 # Main execution flow
 if __name__ == "__main__":
