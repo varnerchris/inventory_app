@@ -32,6 +32,9 @@
             </tbody>
         </table>
 
+        <!-- Loading Message -->
+        <div id="loadingMessage" style="display:none;">Loading...</div>
+
         <!-- Modal for User Input -->
         <div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -89,59 +92,63 @@
     
             // Send the name and barcode to the server via WebSocket
             console.log("DEBUG: Name submitted:", name, "Barcode:", barcode);
-            
-            // Emit the name and barcode back to the server
             socket.emit('submit_name', { barcode: barcode, checked_out_by: name });
     
-            // Close the modal
+            // Close the modal and reset the form
             var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
             myModal.hide();
+            document.getElementById('checkoutForm').reset();
         });
     
-// Function to update the inventory table dynamically
-function updateInventoryTable(items) {
-    var tableBody = document.getElementById('inventoryTable');
-    tableBody.innerHTML = ''; // Clear existing rows
+        // Function to update the inventory table dynamically
+        function updateInventoryTable(items) {
+            var tableBody = document.getElementById('inventoryTable');
+            tableBody.innerHTML = ''; // Clear existing rows
+            document.getElementById('loadingMessage').style.display = 'block'; // Show loading message
 
-    // Create a map to track the most recent item data
-    var inventoryMap = new Map();
+            // Create a map to track the most recent item data
+            var inventoryMap = new Map();
 
-    items.forEach(function(item) {
-        // Check if the barcode already exists in the map
-        if (!inventoryMap.has(item.barcode) || 
-            (item.checkout_timestamp && 
-            new Date(item.checkout_timestamp) > new Date(inventoryMap.get(item.barcode).checkout_timestamp))) {
-            // Update the map with the most recent data for this barcode
-            inventoryMap.set(item.barcode, {
-                status: item.status,
-                checked_out_by: item.checked_out_by || 'N/A',
-                checkout_timestamp: item.checkout_timestamp || 'N/A'
+            items.forEach(function(item) {
+                // Check if the barcode already exists in the map
+                if (!inventoryMap.has(item.barcode) || 
+                    (item.checkout_timestamp && 
+                    new Date(item.checkout_timestamp) > new Date(inventoryMap.get(item.barcode).checkout_timestamp))) {
+                    // Update the map with the most recent data for this barcode
+                    inventoryMap.set(item.barcode, {
+                        status: item.status,
+                        checked_out_by: item.checked_out_by || 'N/A',
+                        checkout_timestamp: item.checkout_timestamp || 'N/A'
+                    });
+                }
             });
-        }
-    });
 
-    // Now iterate through the map to build the table rows
-    inventoryMap.forEach(function(value, barcode) {
-        var row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${barcode}</td>
-            <td>${value.status}</td>
-            <td>${value.checked_out_by}</td>
-            <td>${value.checkout_timestamp}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
+            // Now iterate through the map to build the table rows
+            inventoryMap.forEach(function(value, barcode) {
+                var row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${barcode}</td>
+                    <td>${value.status}</td>
+                    <td>${value.checked_out_by}</td>
+                    <td>${value.checkout_timestamp}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            document.getElementById('loadingMessage').style.display = 'none'; // Hide loading message
+        }
     
-     // Listen for inventory updates from the server
-socket.on('update_inventory', function(data) {
-    console.log("DEBUG: Inventory updated:", data);
+        // Listen for inventory updates from the server
+        socket.on('update_inventory', function(data) {
+            console.log("DEBUG: Inventory updated:", data);
     
-    // Introduce a delay before updating the table
-    setTimeout(() => {
-        updateInventoryTable(data.items); // Update the table with new inventory data
-    }, 500); // Delay in milliseconds (adjust as needed)
-});
+            // Check if data and items are defined
+            if (data && Array.isArray(data.items)) {
+                updateInventoryTable(data.items); // Update the table with new inventory data
+            } else {
+                console.error("DEBUG: Invalid data structure received:", data);
+            }
+        });
     </script>
     
     <!-- Add a hidden input field for the scanned barcode -->

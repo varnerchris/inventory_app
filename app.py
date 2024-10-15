@@ -49,17 +49,26 @@ def get_inventory_data():
         ORDER BY l.timestamp DESC
     ''').fetchall()
 
-    inventory = []
+    # Create a dictionary to hold the most recent inventory state
+    inventory_dict = {}
+
     for item in items:
-        inventory.append({
-            'barcode': item['barcode'],
-            'status': item['status'],
-            'checked_out_by': item['checked_out_by'],
-            'checkout_timestamp': item['checkout_timestamp']
-        })
+        barcode = item['barcode']
+
+        # Update the dictionary with the latest checkout information
+        if barcode not in inventory_dict or (item['checkout_timestamp'] and item['checkout_timestamp'] > inventory_dict[barcode]['checkout_timestamp']):
+            inventory_dict[barcode] = {
+                'status': item['status'],
+                'checked_out_by': item['checked_out_by'] or 'N/A',
+                'checkout_timestamp': item['checkout_timestamp'] or 'N/A'
+            }
+
+    # Convert the dictionary back to a list
+    inventory = [{'barcode': barcode, **data} for barcode, data in inventory_dict.items()]
 
     conn.close()
     return {'items': inventory}
+
 
 # Function to process barcode scan
 def process_barcode(scanner):
