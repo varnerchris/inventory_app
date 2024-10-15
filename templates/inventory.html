@@ -21,7 +21,14 @@
                 </tr>
             </thead>
             <tbody id="inventoryTable">
-                <!-- Rows populated dynamically -->
+                {% for item in items %}
+                    <tr>
+                        <td>{{ item.barcode }}</td>
+                        <td>{{ item.status }}</td>
+                        <td>{{ item.checked_out_by if item.checked_out_by else 'N/A' }}</td>
+                        <td>{{ item.timestamp if item.timestamp else 'N/A' }}</td>
+                    </tr>
+                {% endfor %}
             </tbody>
         </table>
 
