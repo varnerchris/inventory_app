@@ -90,44 +90,51 @@ def process_barcode(scanner):
                     # Add key to barcode string
                     barcode += key[-1]
 
-# Function to toggle item state
 def toggle_item_state(barcode, checked_out_by=None):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # Check if the item exists in the inventory
         cursor.execute("SELECT status FROM inventory WHERE barcode = ?", (barcode,))
         row = cursor.fetchone()
 
         if row is None:
-            # Item does not exist, so we add it to inventory
-            status = 'in'  # Assuming the item is initially 'in'
+            # Item does not exist, create it
+            status = 'in'  # Default status for new items
             cursor.execute("INSERT INTO inventory (barcode, status) VALUES (?, ?)", (barcode, status))
-            print(f"DEBUG: Adding new item to inventory: {barcode}")
-            # Do NOT log this as checked out since it's a new addition
+            action = 'create'  # Log the creation
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            cursor.execute("INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)",
+                           (barcode, action, checked_out_by, timestamp))
         else:
-            # Item exists, toggle its status
+            # Item exists, check its current status
             current_status = row[0]
-            new_status = 'out' if current_status == 'in' else 'in'
-            cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
-            print(f"DEBUG: Toggling item state for barcode: {barcode} to {new_status}")
+            if current_status == 'in':
+                # If the item is currently checked in, check it out
+                new_status = 'out'
+                cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
+                action = 'checkout'  # Log the checkout action
+            else:
+                # If the item is currently checked out, check it in
+                new_status = 'in'
+                cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
+                action = 'checkin'  # Log the checkin action
 
-            if checked_out_by:
-                timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-                action = 'checkout'  # Define the action for logging
-                cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp, action) VALUES (?, ?, ?, ?)",
-                               (barcode, checked_out_by, timestamp, action))
+            # Log the action in the checkout_log
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            cursor.execute("INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)",
+                           (barcode, action, checked_out_by, timestamp))
 
         conn.commit()
 
         # Emit updated inventory to all connected clients
         socketio.emit('update_inventory', get_inventory_data(), broadcast=True)
-        
+
     except Exception as e:
         print(f"Error toggling item state for barcode {barcode}: {e}")
     finally:
         conn.close()
-
-
 
 
 
