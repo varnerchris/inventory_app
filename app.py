@@ -82,6 +82,7 @@ def process_barcode(scanner):
                     barcode += key[-1]
 
 # Function to toggle item state
+# Function to toggle item state
 def toggle_item_state(barcode, checked_out_by=None):
     try:
         conn = get_db_connection()
@@ -90,31 +91,31 @@ def toggle_item_state(barcode, checked_out_by=None):
         row = cursor.fetchone()
 
         if row is None:
-            status = 'in'
+            status = 'in'  # Default status when item does not exist
             cursor.execute("INSERT INTO inventory (barcode, status) VALUES (?, ?)", (barcode, status))
-            print(f"DEBUG: Adding new item to inventory: {barcode}")
+            new_status = status  # Set new_status for consistency
+            print(f"DEBUG: Adding new item to inventory: {barcode} with status {new_status}")
         else:
             current_status = row[0]
             new_status = 'out' if current_status == 'in' else 'in'
             cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
-            print(f"DEBUG: Toggling item state: {barcode} to {new_status}")
+            print(f"DEBUG: Toggling item {barcode} to status {new_status}")
 
-        if checked_out_by and new_status == 'out':
+        if checked_out_by:
             timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-            action = 'checkout'  # Use 'checkout' for checkouts
-            cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp, action) VALUES (?, ?, ?, ?)",
-                           (barcode, checked_out_by, timestamp, action))
+            cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp) VALUES (?, ?, ?)",
+                           (barcode, checked_out_by, timestamp))
 
         conn.commit()
 
         # Emit updated inventory to all connected clients
-        updated_inventory = get_inventory_data()
-        socketio.emit('update_inventory', {'items': updated_inventory}, broadcast=True)
+        socketio.emit('update_inventory', get_inventory_data(), broadcast=True)
 
     except Exception as e:
         print(f"Error toggling item state for barcode {barcode}: {e}")
     finally:
         conn.close()
+
 
 
 
