@@ -98,7 +98,12 @@ def handle_scan(barcode):
 @app.route('/')
 def inventory():
     conn = get_db_connection()
-    items = conn.execute('SELECT * FROM inventory').fetchall()
+    items = conn.execute('''
+        SELECT i.id, i.barcode, i.status, l.checked_out_by, l.timestamp 
+        FROM inventory i
+        LEFT JOIN checkout_log l ON i.barcode = l.barcode 
+        ORDER BY l.timestamp DESC
+    ''').fetchall()
     conn.close()
     return render_template('inventory.html', items=items)
 
@@ -108,6 +113,38 @@ def toggle(barcode):
     checked_out_by = request.form.get('checked_out_by')
     toggle_item_state(barcode, checked_out_by)
     return redirect(url_for('inventory'))
+
+@app.route('/submit_name', methods=['POST'])
+def submit_name():
+    barcode = request.json.get('barcode')
+    checked_out_by = request.json.get('checked_out_by')
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Update inventory status and log the checkout information
+        cursor.execute("SELECT status FROM inventory WHERE barcode = ?", (barcode,))
+        row = cursor.fetchone()
+
+        if row is None:
+            return {'error': 'Barcode not found'}, 404
+
+        # Update the status and log the transaction
+        new_status = 'out' if row[0] == 'in' else 'in'
+        cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
+        cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp) VALUES (?, ?, ?)", 
+                       (barcode, checked_out_by, time.strftime('%Y-%m-%d %H:%M:%S')))
+
+        conn.commit()
+        return {'success': True}
+    
+    except Exception as e:
+        print(f"Error processing barcode {barcode}: {e}")
+        return {'error': str(e)}, 500
+    
+    finally:
+        conn.close()
 
 # Main execution flow
 if __name__ == "__main__":
