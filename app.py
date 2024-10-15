@@ -36,6 +36,31 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+# Function to get all inventory data
+def get_inventory_data():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Fetch all inventory data and latest checkout information
+    items = cursor.execute('''
+        SELECT i.barcode, i.status, l.checked_out_by, l.timestamp AS checkout_timestamp
+        FROM inventory i
+        LEFT JOIN checkout_log l ON i.barcode = l.barcode
+        ORDER BY l.timestamp DESC
+    ''').fetchall()
+
+    inventory = []
+    for item in items:
+        inventory.append({
+            'barcode': item['barcode'],
+            'status': item['status'],
+            'checked_out_by': item['checked_out_by'],
+            'checkout_timestamp': item['checkout_timestamp']
+        })
+
+    conn.close()
+    return {'items': inventory}
+
 # Function to process barcode scan
 def process_barcode(scanner):
     barcode = ''
@@ -50,16 +75,11 @@ def process_barcode(scanner):
                 # When 'Enter' key is detected, barcode is complete
                 if key == 'KEY_ENTER':
                     print(f"DEBUG: Barcode scanned: {barcode}")
-                    
-                    # Emit the scanned barcode to all connected clients
                     socketio.emit('barcode_scanned', {'barcode': barcode})
-                    
-                    toggle_item_state(barcode)  # Process the scanned barcode
                     barcode = ''  # Reset for the next scan
                 else:
                     # Add key to barcode string
                     barcode += key[-1]
-
 
 # Function to toggle item state
 def toggle_item_state(barcode, checked_out_by=None):
@@ -82,26 +102,33 @@ def toggle_item_state(barcode, checked_out_by=None):
             cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp) VALUES (?, ?, ?)",
                            (barcode, checked_out_by, timestamp))
 
-            # Emit update to all connected clients
-            socketio.emit('update_table', {
-                'barcode': barcode,
-                'status': new_status,
-                'checked_out_by': checked_out_by,
-                'timestamp': timestamp
-            })
-
         conn.commit()
+
+        # Emit updated inventory to all connected clients
+        socketio.emit('update_inventory', get_inventory_data(), broadcast=True)
+        
     except Exception as e:
         print(f"Error toggling item state for barcode {barcode}: {e}")
     finally:
         conn.close()
-
 
 # WebSocket event for handling barcode scans
 @socketio.on('scan')
 def handle_scan(barcode):
     print(f"DEBUG: Received scan for barcode: {barcode}")
     toggle_item_state(barcode)
+
+# WebSocket event for handling name submission
+@socketio.on('submit_name')
+def handle_submit_name(data):
+    barcode = data.get('barcode')
+    checked_out_by = data.get('checked_out_by')
+
+    if not barcode or not checked_out_by:
+        return {'error': 'Missing barcode or name'}, 400
+
+    toggle_item_state(barcode, checked_out_by)
+    emit('update_inventory', get_inventory_data(), broadcast=True)
 
 # Flask route to display inventory
 @app.route('/')
@@ -115,46 +142,6 @@ def inventory():
     ''').fetchall()
     conn.close()
     return render_template('inventory.html', items=items)
-
-# Flask route to toggle item status via a web interface
-@app.route('/toggle/<barcode>', methods=['POST'])
-def toggle(barcode):
-    checked_out_by = request.form.get('checked_out_by')
-    toggle_item_state(barcode, checked_out_by)
-    return redirect(url_for('inventory'))
-
-@app.route('/submit_name', methods=['POST'])
-def submit_name():
-    barcode = request.json.get('barcode')
-    checked_out_by = request.json.get('checked_out_by')
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Update inventory status and log the checkout information
-        cursor.execute("SELECT status FROM inventory WHERE barcode = ?", (barcode,))
-        row = cursor.fetchone()
-
-        if row is None:
-            return {'error': 'Barcode not found'}, 404
-
-        # Update the status and log the transaction
-        new_status = 'out' if row[0] == 'in' else 'in'
-        cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
-        cursor.execute("INSERT INTO checkout_log (barcode, checked_out_by, timestamp) VALUES (?, ?, ?)", 
-                       (barcode, checked_out_by, time.strftime('%Y-%m-%d %H:%M:%S')))
-
-        conn.commit()
-        return {'success': True}
-    
-    except Exception as e:
-        print(f"Error processing barcode {barcode}: {e}")
-        return {'error': str(e)}, 500
-    
-    finally:
-        conn.close()
-
 
 # Main execution flow
 if __name__ == "__main__":
