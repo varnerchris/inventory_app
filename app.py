@@ -115,7 +115,7 @@ def toggle_item_state(barcode, checked_out_by=None):
                 new_status = 'out'
                 cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
                 action = 'checkout'  # Log the checkout action
-            else:
+            elif current_status == 'out':
                 # If the item is currently checked out, check it in
                 new_status = 'in'
                 cursor.execute("UPDATE inventory SET status = ? WHERE barcode = ?", (new_status, barcode))
@@ -135,6 +135,7 @@ def toggle_item_state(barcode, checked_out_by=None):
         print(f"Error toggling item state for barcode {barcode}: {e}")
     finally:
         conn.close()
+
 
 
 
@@ -185,14 +186,25 @@ def inventory():
 
     return render_template('inventory.html', items=items_list)
 
-# Function to retrieve inventory data from the database
 def get_inventory_data():
     conn = get_db_connection()
+    
     items = conn.execute('''
-        SELECT i.barcode, i.status, l.checked_out_by, l.timestamp 
-        FROM inventory i
-        LEFT JOIN checkout_log l ON i.barcode = l.barcode 
-        ORDER BY l.timestamp DESC
+        SELECT 
+            i.barcode, 
+            i.status, 
+            l.checked_out_by, 
+            l.timestamp AS checkout_timestamp 
+        FROM 
+            inventory i
+        LEFT JOIN 
+            (SELECT barcode, checked_out_by, timestamp 
+             FROM checkout_log 
+             WHERE (barcode, timestamp) IN (
+                 SELECT barcode, MAX(timestamp) 
+                 FROM checkout_log 
+                 GROUP BY barcode
+             )) l ON i.barcode = l.barcode
     ''').fetchall()
     
     # Convert to a list of dictionaries for easier manipulation on the client
@@ -201,12 +213,12 @@ def get_inventory_data():
         inventory_items.append({
             'barcode': item['barcode'],
             'status': item['status'],
-            'checked_out_by': item['checked_out_by'],
-            'checkout_timestamp': item['timestamp']
+            'checked_out_by': item['checked_out_by'] if item['checked_out_by'] else 'N/A',  # Handle NULL values
+            'checkout_timestamp': item['checkout_timestamp'] if item['checkout_timestamp'] else 'N/A'  # Handle NULL values
         })
     
     conn.close()
-    return inventory_items
+    return {'items': inventory_items}  # Return as a dictionary with 'items' key for consistency
 
 
 
