@@ -91,19 +91,23 @@
         });
     
        // Fetch employees for the dropdown when the modal is opened
-    $('#checkoutModal').on('show.bs.modal', function () {
-        $.ajax({
-            url: '/get_employees',
-            method: 'GET',
-            success: function(data) {
-                $('#employeeSelect').empty();
-                $('#employeeSelect').select2({
-                    placeholder: "Select an employee",
-                    data: data
+       $('#checkoutModal').on('show.bs.modal', function () {
+                $.ajax({
+                    url: '/get_employees',
+                    method: 'GET',
+                    success: function(data) {
+                        console.log("DEBUG: Employees fetched:", data); // Log the fetched employees
+                        $('#employeeSelect').empty();
+                        $('#employeeSelect').select2({
+                            placeholder: "Select an employee",
+                            data: data
+                        });
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error fetching employees:", error);
+                    }
                 });
-            }
-        });
-    });
+            });
 
         // Handle form submission inside the modal
         $('#checkoutForm').on('submit', function(event) {
