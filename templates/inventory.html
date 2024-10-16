@@ -95,41 +95,45 @@
         var socket = io();
 
         // Listen for the 'barcode_scanned' event
-        socket.on('barcode_scanned', function(data) {
-            console.log("DEBUG: Barcode Scanned:", data);
+socket.on('barcode_scanned', function(data) {
+    console.log("DEBUG: Barcode Scanned:", data);
 
-            if (data && data.barcode) {
-                console.log("DEBUG: Data received is valid, showing modal...");
+    if (data && data.barcode) {
+        console.log("DEBUG: Data received is valid, showing modal...");
 
-                // Set the scanned barcode to a hidden input field
-                document.getElementById('scannedBarcode').value = data.barcode;
+        // Set the scanned barcode to a hidden input field
+        document.getElementById('scannedBarcode').value = data.barcode;
 
-                // Fetch item status to decide whether to show return date field
-                $.ajax({
-                    url: '/get_item_status',
-                    method: 'GET',
-                    data: { barcode: data.barcode },
-                    success: function(item) {
-                        if (item.status === 'in') {
-                            
-                            $('#returnDateContainer').show();  // Show date picker for 'in' status
-                        } else {
-                            console.log("DEBUG: HIDING modal...");
-                            $('#returnDateContainer').hide();  // Hide date picker for 'out' status
-                        }
+        // Fetch item status to decide whether to show return date field
+        $.ajax({
+            url: '/get_item_status',
+            method: 'GET',
+            data: { barcode: data.barcode },
+            success: function(item) {
+                // Check the item status and decide whether to show the return date
+                if (item.status === 'in') {
+                    $('#returnDateContainer').show();  // Show date picker for 'in' status
+                } else {
+                    console.log("DEBUG: Hiding return date input.");
+                    $('#returnDateContainer').hide();  // Hide date picker for 'out' status
+                }
 
-                        var myModal = new bootstrap.Modal(document.getElementById('checkoutModal'), {
-                            keyboard: false
-                        });
-                        console.log("DEBUG: Showing modal...");
-
-                        myModal.show();
-                    }
+                // Now show the modal
+                var myModal = new bootstrap.Modal(document.getElementById('checkoutModal'), {
+                    keyboard: false
                 });
-            } else {
-                console.log("DEBUG: Invalid data received for barcode scan.");
+                console.log("DEBUG: Showing modal...");
+                myModal.show();
+            },
+            error: function(xhr, status, error) {
+                console.error("Error fetching item status:", error);
+                // Handle item not found or other errors gracefully
             }
         });
+    } else {
+        console.log("DEBUG: Invalid data received for barcode scan.");
+    }
+});
 
         // Fetch employees for the dropdown when the modal is opened
         $('#checkoutModal').on('show.bs.modal', function () {

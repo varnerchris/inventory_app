@@ -237,7 +237,7 @@ def get_item_status():
         return jsonify({
             'status': item['status'],
             'checked_out_by': item['checked_out_by'],
-            'expected_return_date': item['expected_return_date']
+            'expected_return_date': item['expected_return_date'] or 'N/A'  # Return expected return date
         })
     else:
         return jsonify({'error': 'Item not found'}), 404
@@ -264,7 +264,7 @@ def get_inventory_data():
             i.status, 
             l.checked_out_by, 
             l.timestamp AS checkout_timestamp,
-         i.expected_return_date  -- Include expected return date
+            i.expected_return_date  -- Include expected return date
 
         FROM 
             inventory i
