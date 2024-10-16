@@ -108,7 +108,7 @@ def process_barcode(scanner):
 def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     # Check if the item already exists in the inventory
     item = cursor.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
 
@@ -117,23 +117,17 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
         new_status = 'out' if item['status'] == 'in' else 'in'
 
         if new_status == 'out':
-            # When checking out, ensure the expected return date is provided
             if not expected_return_date:
                 print("Expected return date is required for check-out.")
-                return  # Exit the function if expected return date is not set
+                return
         else:
-            # When checking in, clear the expected return date
             expected_return_date = None  # Clear return date when checking in
-
     else:
-        # If the item does not exist, it means it's a new entry (create action)
-        new_status = 'out'  # Assume first-time scan means checking out
-        action = 'create'
-        
-        # Ensure expected_return_date is provided for the new item being checked out
+        # If the item does not exist, insert it
+        new_status = 'out'
         if not expected_return_date:
             print("Expected return date is required for new item check-out.")
-            return  # Exit if no return date is provided
+            return
         
         # Insert the new item into the inventory table
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
