@@ -111,8 +111,10 @@
                     data: { barcode: data.barcode },
                     success: function(item) {
                         if (item.status === 'in') {
+                            
                             $('#returnDateContainer').show();  // Show date picker for 'in' status
                         } else {
+                            console.log("DEBUG: HIDING modal...");
                             $('#returnDateContainer').hide();  // Hide date picker for 'out' status
                         }
 
