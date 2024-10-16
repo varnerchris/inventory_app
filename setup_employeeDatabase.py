@@ -2,7 +2,7 @@ import sqlite3
 
 def create_employee_table():
     # Connect to SQLite database (or create it if it doesn't exist)
-    conn = sqlite3.connect('inventoy.db')
+    conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
 
     # Create the employees table if it doesn't exist
