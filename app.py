@@ -10,6 +10,9 @@ import threading
 app = Flask(__name__)
 socketio = SocketIO(app)
 
+
+
+
 # Function to check if the inventory table exists
 def initialize_database():
     conn = sqlite3.connect('inventory.db')
@@ -26,6 +29,8 @@ def initialize_database():
     else:
         print("Table 'inventory' already exists.")
     conn.close()
+
+
 
 # Initialize the database
 initialize_database()
@@ -90,6 +95,9 @@ def process_barcode(scanner):
                     # Add key to barcode string
                     barcode += key[-1]
 
+
+
+
 # Function to toggle the state of an item
 def toggle_item_state(barcode, checked_out_by):
     conn = get_db_connection()
@@ -133,6 +141,9 @@ def handle_scan(barcode):
     print(f"DEBUG: Received scan for barcode: {barcode}")
     toggle_item_state(barcode)
 
+
+
+
 # WebSocket event for handling name submission
 @socketio.on('submit_name')
 def handle_submit_name(data):
@@ -144,6 +155,9 @@ def handle_submit_name(data):
 
     toggle_item_state(barcode, checked_out_by)
     emit('update_inventory', get_inventory_data(), broadcast=True)
+
+
+
 
 # Flask route to display inventory
 @app.route('/')
@@ -185,6 +199,9 @@ def inventory():
     return render_template('inventory.html', items=items_list)
 
 
+
+
+
 def get_inventory_data():
     conn = get_db_connection()
     
@@ -218,6 +235,9 @@ def get_inventory_data():
     
     conn.close()
     return {'items': inventory_items}  # Return as a dictionary with 'items' key for consistency
+
+
+
 
 
 
