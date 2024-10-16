@@ -105,39 +105,40 @@ def process_barcode(scanner):
 
 
 # Function to toggle the state of an item
-def toggle_item_state(barcode, checked_out_by=None, expected_return_date=None):
+def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Check if the item exists
+    # Check if the item already exists in the inventory
     item = cursor.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
 
     if item:
-        # Toggle status
+        # If the item exists, toggle the status
         new_status = 'out' if item['status'] == 'in' else 'in'
-        action = 'checkout' if new_status == 'out' else 'checkin'
-    else:
-        # If the item does not exist, insert it
-        new_status = 'out'  # Assuming it's being checked out for the first time
-        action = 'create'
-        cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by) VALUES (?, ?, ?)', 
-                       (barcode, new_status, checked_out_by))
 
-    # Handle expected return date logic
-    if new_status == 'out':
-        expected_return_date = None  # Clear the expected return date when checking out
+        if new_status == 'out':
+            # When checking out, ensure the expected return date is provided
+            if not expected_return_date:
+                print("Expected return date is required for check-out.")
+                return  # Exit the function if expected return date is not set
+        else:
+            # When checking in, clear the expected return date
+            expected_return_date = None  # Clear return date when checking in
     else:
-        # Expected return date is required for check-in
-        if not expected_return_date:
-            print("Expected return date is required for check-in.")
-            return
-    
-    # Insert log in checkout_log
+        # If the item does not exist, it means it's a new entry (create action)
+        new_status = 'out'  # Assume first-time scan means checking out
+        action = 'create'
+        
+        # Insert the new item into the inventory table
+        cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
+                       (barcode, new_status, checked_out_by, expected_return_date))
+
+    # Insert the action into the checkout_log
     timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute('INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)',
                    (barcode, action, checked_out_by, timestamp))
 
-    # Update inventory table with the new status and expected return date
+    # Update the inventory table with the new status, checked out by, and expected return date
     cursor.execute('UPDATE inventory SET status = ?, checked_out_by = ?, checkout_timestamp = ?, expected_return_date = ? WHERE barcode = ?', 
                    (new_status, checked_out_by, timestamp, expected_return_date, barcode))
 

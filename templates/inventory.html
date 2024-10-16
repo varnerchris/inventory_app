@@ -156,7 +156,7 @@
             });
         });
 
-        // Handle form submission with employee ID and optional return date
+        // Handle form submission with employee ID and return date
         $('#checkoutForm').on('submit', function(event) {
             event.preventDefault();
             var employeeId = $('#employeeSelect').val();
@@ -165,10 +165,11 @@
 
             // Send the employee ID, barcode, and expected return date to the server
             socket.emit('submit_name', { barcode: barcode, employee_id: employeeId, expected_return_date: expectedReturnDate });
-
+            
             var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
             myModal.hide();
         });
+
 
         // Function to update the inventory table dynamically
         function updateInventoryTable(items) {
