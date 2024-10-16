@@ -285,8 +285,8 @@ def get_inventory_data():
             'barcode': item['barcode'],
             'status': item['status'],
             'checked_out_by': item['checked_out_by'] if item['checked_out_by'] else 'N/A',  # Handle NULL values
-            'checkout_timestamp': item['checkout_timestamp'] if item['checkout_timestamp'], else 'N/A'  # Handle NULL values
-           'expected_return_date': item['expected_return_date'] if item['expected_return_date'] else 'N/A'  # Handle NULL values
+            'checkout_timestamp': item['checkout_timestamp'] if item['checkout_timestamp'] else 'N/A',  # Handle NULL values
+            'expected_return_date': item['expected_return_date'] if item['expected_return_date'] else 'N/A'  # Handle NULL values
 
         })
     
