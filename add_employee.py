@@ -2,7 +2,7 @@ import sqlite3
 
 def add_employee(name, email):
     # Connect to SQLite database
-    conn = sqlite3.connect('employees.db')
+    conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
 
     # Insert employee data into the table
