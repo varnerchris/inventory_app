@@ -168,20 +168,29 @@ def handle_scan(barcode):
 # WebSocket event for handling name submission
 @socketio.on('submit_name')
 def handle_name_submission(data):
-    barcode = data.get('barcode')
-    employee_id = data.get('employee_id')
-    expected_return_date = data.get('expected_return_date')
-    
-    # Fetch employee name from the database
-    conn = get_db_connection()
-    employee = conn.execute('SELECT name FROM employees WHERE id = ?', (employee_id,)).fetchone()
-    
-    if not barcode or not employee:
-        return {'error': 'Missing barcode or employee'}, 400
+    barcode = data['barcode']
+    employee_id = data['employee_id']
+    expected_return_date = data.get('expected_return_date')  # Get expected return date
 
-    # Use employee name in inventory update
-    toggle_item_state(barcode, employee['name'],expected_return_date)
+    conn = get_db_connection()
+
+    # Check if the item exists
+    item = conn.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
+
+    if item:
+        # If item exists, update it
+        cursor.execute('UPDATE inventory SET checked_out_by = ?, checkout_timestamp = CURRENT_TIMESTAMP, expected_return_date = ? WHERE barcode = ?',
+                       (employee_id, expected_return_date, barcode))
+    else:
+        # If the item does not exist, insert it
+        cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
+                       (barcode, 'in', employee_id, expected_return_date))
+
+    conn.commit()
+    conn.close()
+
     emit('update_inventory', get_inventory_data(), broadcast=True)
+
 
 
 
@@ -228,7 +237,7 @@ def inventory():
 # Route to GET item Status
 @app.route('/get_item_status', methods=['GET'])
 def get_item_status():
-    barcode = request.args.get('barcode')  # Get the barcode from the query parameters
+    barcode = request.args.get('barcode')
     conn = get_db_connection()
     item = conn.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
     conn.close()
@@ -240,8 +249,8 @@ def get_item_status():
             'expected_return_date': item['expected_return_date'] or 'N/A'
         })
     else:
-        print(f"DEBUG: Item with barcode {barcode} not found in inventory.")
-        return jsonify({'error': 'Item not found'}), 404
+        # Return a response indicating the item does not exist
+        return jsonify({'status': None}), 404  # Indicate item does not exist
 
 
 # Route to get employee names and emails for the dropdown
