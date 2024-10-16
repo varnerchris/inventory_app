@@ -23,3 +23,11 @@ if __name__ == "__main__":
 
     # Add the employee to the database
     add_employee(name, email)
+
+# Retrieve and print the data from the table
+    cursor.execute('SELECT * FROM employees')
+    rows = cursor.fetchall()
+
+    print("Employees in the database:")
+    for row in rows:
+        print(row)

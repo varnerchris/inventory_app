@@ -28,9 +28,18 @@ CREATE TABLE IF NOT EXISTS checkout_log (
 
 ''')
 
+  # Create the employees table if it doesn't exist
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS employees (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE
+    );
+    ''')
+
 
 # Commit the changes and close the connection
 conn.commit()
 conn.close()
 
-print("Inventory and checkout_log tables created successfully.")
+print("Inventory, checkout_log, and employees tables created successfully.")
