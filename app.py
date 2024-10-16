@@ -124,10 +124,16 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
         else:
             # When checking in, clear the expected return date
             expected_return_date = None  # Clear return date when checking in
+
     else:
         # If the item does not exist, it means it's a new entry (create action)
         new_status = 'out'  # Assume first-time scan means checking out
         action = 'create'
+        
+        # Ensure expected_return_date is provided for the new item being checked out
+        if not expected_return_date:
+            print("Expected return date is required for new item check-out.")
+            return  # Exit if no return date is provided
         
         # Insert the new item into the inventory table
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
@@ -136,7 +142,7 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
     # Insert the action into the checkout_log
     timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute('INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)',
-                   (barcode, action, checked_out_by, timestamp))
+                   (barcode, action if not item else 'checkout', checked_out_by, timestamp))
 
     # Update the inventory table with the new status, checked out by, and expected return date
     cursor.execute('UPDATE inventory SET status = ?, checked_out_by = ?, checkout_timestamp = ?, expected_return_date = ? WHERE barcode = ?', 
@@ -144,6 +150,7 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
 
     conn.commit()
     conn.close()
+
 
 
 
