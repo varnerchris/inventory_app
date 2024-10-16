@@ -11,8 +11,9 @@ CREATE TABLE IF NOT EXISTS inventory (
     barcode TEXT NOT NULL UNIQUE,
     status TEXT NOT NULL CHECK (status IN ('in', 'out')),
     checked_out_by TEXT,  -- Column for the name of the person checking out
-    checkout_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP  -- Column for the checkout timestamp
-)
+    checkout_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Column for the checkout timestamp
+    expected_return_date DATETIME DEFAULT NULL
+               )
 ''')
 
 # Create the checkout_log table to track check-ins and check-outs
