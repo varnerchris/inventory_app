@@ -7,18 +7,27 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
     <style>
-        /* Ensure that Select2 dropdown appears above other elements */
-        .select2-container--default .select2-selection--single {
-            z-index: 1051; /* Higher than Bootstrap modals */
-        }
-    
-        .select2-container--default .select2-selection--multiple {
-            z-index: 1051; /* Higher than Bootstrap modals */
-        }
-    
-        .select2-container--default .select2-results {
-            z-index: 1052; /* Higher than Bootstrap modals */
-        }
+           /* Ensure that Select2 dropdown appears above other elements */
+    .select2-container--default .select2-selection--single {
+        z-index: 1051; /* Higher than Bootstrap modals */
+    }
+
+    .select2-container--default .select2-selection--multiple {
+        z-index: 1051; /* Higher than Bootstrap modals */
+    }
+
+    .select2-container--default .select2-results {
+        z-index: 1052; /* Higher than Bootstrap modals */
+    }
+
+    /* Adjust Bootstrap modal z-index */
+    .modal {
+        z-index: 1050; /* Ensure modal is below Select2 dropdown */
+    }
+
+    .modal-backdrop {
+        z-index: 1040; /* Ensure backdrop is below Select2 dropdown */
+    }
     </style>
 </head>
 <body>
