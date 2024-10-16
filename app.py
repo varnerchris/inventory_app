@@ -217,6 +217,22 @@ def inventory():
 
     return render_template('inventory.html', items=items_list)
 
+# Route to GET item Status
+@app.route('/get_item_status', methods=['GET'])
+def get_item_status():
+    barcode = request.args.get('barcode')  # Get the barcode from the query parameters
+    conn = get_db_connection()
+    item = conn.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
+    conn.close()
+
+    if item:
+        return jsonify({
+            'status': item['status'],
+            'checked_out_by': item['checked_out_by'],
+            'expected_return_date': item['expected_return_date']
+        })
+    else:
+        return jsonify({'error': 'Item not found'}), 404
 
 # Route to get employee names and emails for the dropdown
 @app.route('/get_employees', methods=['GET'])
