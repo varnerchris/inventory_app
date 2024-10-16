@@ -105,27 +105,19 @@
         });
     });
 
-            // Handle form submission inside the modal
-            $('#checkoutForm').on('submit', function(event) {
-                event.preventDefault();
-                var employeeId = $('#employeeSelect').val();
-                var barcode = $('#scannedBarcode').val();
+        // Handle form submission inside the modal
+        $('#checkoutForm').on('submit', function(event) {
+            event.preventDefault();
+            var employeeId = $('#employeeSelect').val();  // Get the selected employee ID
+            var barcode = $('#scannedBarcode').val();      // Get the scanned barcode
 
-                socket.emit('submit_name', { barcode: barcode, employee_id: employeeId });
+            // Send the employee ID and barcode to the server via WebSocket
+            console.log("DEBUG: Employee ID submitted:", employeeId, "Barcode:", barcode);
+            socket.emit('submit_name', { barcode: barcode, employee_id: employeeId });  // Send employee ID
 
-                // Close the modal after submission
-                var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
-                myModal.hide();
-            });
-    
-            // Send the name and barcode to the server via WebSocket
-            console.log("DEBUG: Name submitted:", name, "Barcode:", barcode);
-            socket.emit('submit_name', { barcode: barcode, checked_out_by: name });
-    
-            // Close the modal and reset the form
+            // Close the modal after submission
             var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
             myModal.hide();
-            document.getElementById('checkoutForm').reset();
         });
     
         // Function to update the inventory table dynamically
