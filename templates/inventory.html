@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventory</title>
+    <title>NSSRA Inventory System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
 </head>
 <body>
     <div class="container">
@@ -35,7 +36,6 @@
         <!-- Loading Message -->
         <div id="loadingMessage" style="display:none;">Loading...</div>
 
-        <!-- Modal for User Input -->
         <!-- Modal for selecting an employee -->
         <div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -59,27 +59,23 @@
         </div>
     </div>
 
-        <!-- jQuery and Select2 -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
-    
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
-    
+    <!-- jQuery and Select2 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+
     <script>
         var socket = io();
-    
+
         // Listen for the 'barcode_scanned' event
         socket.on('barcode_scanned', function(data) {
             console.log("DEBUG: Barcode Scanned:", data);
             
-            // Check if data is valid
             if (data && data.barcode) {
                 console.log("DEBUG: Data received is valid, showing modal...");
-    
-                // Set the scanned barcode to a hidden input field
                 document.getElementById('scannedBarcode').value = data.barcode;
-    
+
                 // Show the modal when an item is scanned
                 var myModal = new bootstrap.Modal(document.getElementById('checkoutModal'), {
                     keyboard: false
@@ -89,25 +85,31 @@
                 console.log("DEBUG: Invalid data received for barcode scan.");
             }
         });
-    
-       // Fetch employees for the dropdown when the modal is opened
-       $('#checkoutModal').on('show.bs.modal', function () {
-                $.ajax({
-                    url: '/get_employees',
-                    method: 'GET',
-                    success: function(data) {
-                        console.log("DEBUG: Employees fetched:", data); // Log the fetched employees
-                        $('#employeeSelect').empty();
-                        $('#employeeSelect').select2({
-                            placeholder: "Select an employee",
-                            data: data
-                        });
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("Error fetching employees:", error);
-                    }
-                });
+
+        // Fetch employees for the dropdown when the modal is opened
+        $('#checkoutModal').on('show.bs.modal', function () {
+            $.ajax({
+                url: '/get_employees',
+                method: 'GET',
+                success: function(data) {
+                    console.log("DEBUG: Employees fetched:", data); // Log the fetched employees
+                    $('#employeeSelect').empty(); // Clear existing options
+
+                    // Populate the dropdown with employee data
+                    data.forEach(function(employee) {
+                        $('#employeeSelect').append(new Option(employee.text, employee.id));
+                    });
+
+                    $('#employeeSelect').select2({
+                        placeholder: "Select an employee",
+                        allowClear: true // Allows clearing the selection
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error fetching employees:", error);
+                }
             });
+        });
 
         // Handle form submission inside the modal
         $('#checkoutForm').on('submit', function(event) {
@@ -123,7 +125,7 @@
             var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
             myModal.hide();
         });
-    
+
         // Function to update the inventory table dynamically
         function updateInventoryTable(items) {
             var tableBody = document.getElementById('inventoryTable');
@@ -177,6 +179,5 @@
     
     <!-- Add a hidden input field for the scanned barcode -->
     <input type="hidden" id="scannedBarcode" value="">
-    
 </body>
 </html>
