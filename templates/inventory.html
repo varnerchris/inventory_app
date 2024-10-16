@@ -36,19 +36,20 @@
         <div id="loadingMessage" style="display:none;">Loading...</div>
 
         <!-- Modal for User Input -->
+        <!-- Modal for selecting an employee -->
         <div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="checkoutModalLabel">Enter Your Name</h5>
+                        <h5 class="modal-title" id="checkoutModalLabel">Select Employee</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <form id="checkoutForm">
                             <div class="mb-3">
-                                <label for="nameInput" class="form-label">Name</label>
-                                <input type="text" class="form-control" id="nameInput" required>
-                                <input type="hidden" id="scannedBarcode">
+                                <label for="employeeSelect" class="form-label">Employee</label>
+                                <select id="employeeSelect" class="form-control" style="width: 100%;"></select>
+                                <input type="hidden" id="scannedBarcode" value="">
                             </div>
                             <button type="submit" class="btn btn-primary">Submit</button>
                         </form>
@@ -58,8 +59,12 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+        <!-- jQuery and Select2 -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
+    
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
     
     <script>
         var socket = io();
@@ -85,11 +90,33 @@
             }
         });
     
-        // Handle form submission inside modal
-        document.getElementById('checkoutForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            var name = document.getElementById('nameInput').value;
-            var barcode = document.getElementById('scannedBarcode').value;
+       // Fetch employees for the dropdown when the modal is opened
+    $('#checkoutModal').on('show.bs.modal', function () {
+        $.ajax({
+            url: '/get_employees',
+            method: 'GET',
+            success: function(data) {
+                $('#employeeSelect').empty();
+                $('#employeeSelect').select2({
+                    placeholder: "Select an employee",
+                    data: data
+                });
+            }
+        });
+    });
+
+            // Handle form submission inside the modal
+            $('#checkoutForm').on('submit', function(event) {
+                event.preventDefault();
+                var employeeId = $('#employeeSelect').val();
+                var barcode = $('#scannedBarcode').val();
+
+                socket.emit('submit_name', { barcode: barcode, employee_id: employeeId });
+
+                // Close the modal after submission
+                var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
+                myModal.hide();
+            });
     
             // Send the name and barcode to the server via WebSocket
             console.log("DEBUG: Name submitted:", name, "Barcode:", barcode);

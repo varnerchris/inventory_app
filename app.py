@@ -2,7 +2,7 @@ import sqlite3
 import subprocess
 import evdev
 import time
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_socketio import SocketIO, emit
 import threading
 
@@ -35,11 +35,15 @@ def initialize_database():
 # Initialize the database
 initialize_database()
 
+
+
 # Connect to SQLite database globally
 def get_db_connection():
     conn = sqlite3.connect('inventory.db')
     conn.row_factory = sqlite3.Row
     return conn
+
+
 
 # Function to get all inventory data
 def get_inventory_data():
@@ -75,6 +79,8 @@ def get_inventory_data():
     return {'items': inventory}
 
 
+
+
 # Function to process barcode scan
 def process_barcode(scanner):
     barcode = ''
@@ -103,19 +109,14 @@ def toggle_item_state(barcode, checked_out_by):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Check if the item already exists in the inventory
     item = cursor.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
 
     if item:
-        # If the item exists, toggle the status
         new_status = 'out' if item['status'] == 'in' else 'in'
         action = 'checkout' if new_status == 'out' else 'checkin'
     else:
-        # If the item does not exist, insert it as a 'create' action
         new_status = 'out'  # Assuming first-time scan means checking out
         action = 'create'
-        
-        # Insert the new item into the inventory table
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by) VALUES (?, ?, ?)', 
                        (barcode, new_status, checked_out_by))
 
@@ -124,7 +125,7 @@ def toggle_item_state(barcode, checked_out_by):
     cursor.execute('INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)',
                    (barcode, action, checked_out_by, timestamp))
 
-    # Update the inventory table with the new status and timestamp
+    # Update the inventory table with the new status
     cursor.execute('UPDATE inventory SET status = ?, checked_out_by = ?, checkout_timestamp = ? WHERE barcode = ?', 
                    (new_status, checked_out_by, timestamp, barcode))
 
@@ -146,14 +147,19 @@ def handle_scan(barcode):
 
 # WebSocket event for handling name submission
 @socketio.on('submit_name')
-def handle_submit_name(data):
-    barcode = data.get('barcode')
-    checked_out_by = data.get('checked_out_by')
+def handle_name_submission(data):
+    barcode = data['barcode']
+    employee_id = data['employee_id']
+    
+    # Fetch employee name from the database
+    conn = get_db_connection()
+    employee = conn.execute('SELECT name FROM employees WHERE id = ?', (employee_id,)).fetchone()
+    
+    if not barcode or not employee:
+        return {'error': 'Missing barcode or employee'}, 400
 
-    if not barcode or not checked_out_by:
-        return {'error': 'Missing barcode or name'}, 400
-
-    toggle_item_state(barcode, checked_out_by)
+    # Use employee name in inventory update
+    toggle_item_state(barcode, employee['name'])
     emit('update_inventory', get_inventory_data(), broadcast=True)
 
 
@@ -199,7 +205,17 @@ def inventory():
     return render_template('inventory.html', items=items_list)
 
 
-
+# Route to get employee names and emails for the dropdown
+@app.route('/get_employees', methods=['GET'])
+def get_employees():
+    conn = get_db_connection()
+    employees = conn.execute('SELECT id, name, email FROM employees').fetchall()
+    conn.close()
+    
+    # Format data for Select2: id and text fields
+    employee_list = [{'id': emp['id'], 'text': f"{emp['name']} ({emp['email']})"} for emp in employees]
+    
+    return jsonify(employee_list)
 
 
 def get_inventory_data():
