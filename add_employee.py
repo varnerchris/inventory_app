@@ -12,17 +12,19 @@ def add_employee(name, email):
         print(f"Employee {name} added successfully.")
     except sqlite3.IntegrityError:
         print(f"Error: Employee with email {email} already exists.")
-    
-    # Close the connection
-    conn.close()
 
-     # Retrieve and print the data from the table
+      # Retrieve and print the data from the table
     cursor.execute('SELECT * FROM employees')
     rows = cursor.fetchall()
 
     print("Employees in the database:")
     for row in rows:
         print(row)
+
+    
+    # Close the connection
+    conn.close()
+
 
 if __name__ == "__main__":
     # Take employee details from user input
