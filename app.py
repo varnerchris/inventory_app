@@ -105,29 +105,41 @@ def process_barcode(scanner):
 
 
 # Function to toggle the state of an item
-def toggle_item_state(barcode, checked_out_by):
+def toggle_item_state(barcode, checked_out_by=None, expected_return_date=None):
     conn = get_db_connection()
     cursor = conn.cursor()
     
+    # Check if the item exists
     item = cursor.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
 
     if item:
+        # Toggle status
         new_status = 'out' if item['status'] == 'in' else 'in'
         action = 'checkout' if new_status == 'out' else 'checkin'
     else:
-        new_status = 'out'  # Assuming first-time scan means checking out
+        # If the item does not exist, insert it
+        new_status = 'out'  # Assuming it's being checked out for the first time
         action = 'create'
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by) VALUES (?, ?, ?)', 
                        (barcode, new_status, checked_out_by))
 
-    # Insert the action into the checkout_log
+    # Handle expected return date logic
+    if new_status == 'out':
+        expected_return_date = None  # Clear the expected return date when checking out
+    else:
+        # Expected return date is required for check-in
+        if not expected_return_date:
+            print("Expected return date is required for check-in.")
+            return
+    
+    # Insert log in checkout_log
     timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute('INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)',
                    (barcode, action, checked_out_by, timestamp))
 
-    # Update the inventory table with the new status
-    cursor.execute('UPDATE inventory SET status = ?, checked_out_by = ?, checkout_timestamp = ? WHERE barcode = ?', 
-                   (new_status, checked_out_by, timestamp, barcode))
+    # Update inventory table with the new status and expected return date
+    cursor.execute('UPDATE inventory SET status = ?, checked_out_by = ?, checkout_timestamp = ?, expected_return_date = ? WHERE barcode = ?', 
+                   (new_status, checked_out_by, timestamp, expected_return_date, barcode))
 
     conn.commit()
     conn.close()
@@ -148,8 +160,9 @@ def handle_scan(barcode):
 # WebSocket event for handling name submission
 @socketio.on('submit_name')
 def handle_name_submission(data):
-    barcode = data['barcode']
-    employee_id = data['employee_id']
+    barcode = data.get('barcode')
+    employee_id = data.get('employee_id')
+    expected_return_date = data.get('expected_return_date')
     
     # Fetch employee name from the database
     conn = get_db_connection()
@@ -159,7 +172,7 @@ def handle_name_submission(data):
         return {'error': 'Missing barcode or employee'}, 400
 
     # Use employee name in inventory update
-    toggle_item_state(barcode, employee['name'])
+    toggle_item_state(barcode, employee['name'],expected_return_date)
     emit('update_inventory', get_inventory_data(), broadcast=True)
 
 

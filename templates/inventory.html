@@ -42,6 +42,7 @@
                     <th>Status</th>
                     <th>Checked Out/in By</th>
                     <th>Timestamp</th>
+                    <th>Expected Return Date</th>
                 </tr>
             </thead>
             <tbody id="inventoryTable">
@@ -51,6 +52,8 @@
                         <td>{{ item.status }}</td>
                         <td>{{ item.checked_out_by if item.checked_out_by else 'N/A' }}</td>
                         <td>{{ item.timestamp if item.timestamp else 'N/A' }}</td>
+                        <td>{{ item.expected_return_date if item.expected_return_date else 'N/A' }}</td> <!-- Show return date -->
+
                     </tr>
                 {% endfor %}
             </tbody>
@@ -59,12 +62,12 @@
         <!-- Loading Message -->
         <div id="loadingMessage" style="display:none;">Loading...</div>
 
-        <!-- Modal for selecting an employee -->
+       <!-- Modal for selecting an employee and expected return date -->
         <div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="checkoutModalLabel">Select Employee</h5>
+                        <h5 class="modal-title" id="checkoutModalLabel">Select Employee and Expected Return Date</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -72,14 +75,19 @@
                             <div class="mb-3">
                                 <label for="employeeSelect" class="form-label">Employee</label>
                                 <select id="employeeSelect" class="form-control" style="width: 100%;"></select>
-                                <input type="hidden" id="scannedBarcode" value="">
                             </div>
+                            <div class="mb-3" id="returnDateContainer" style="display: none;">
+                                <label for="expectedReturnDate" class="form-label">Expected Return Date</label>
+                                <input type="date" id="expectedReturnDate" class="form-control">
+                            </div>
+                            <input type="hidden" id="scannedBarcode" value="">
                             <button type="submit" class="btn btn-primary">Submit</button>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
+
     </div>
 
     <!-- jQuery and Select2 -->
@@ -93,21 +101,34 @@
 
         // Listen for the 'barcode_scanned' event
         socket.on('barcode_scanned', function(data) {
-            console.log("DEBUG: Barcode Scanned:", data);
-            
-            if (data && data.barcode) {
-                console.log("DEBUG: Data received is valid, showing modal...");
-                document.getElementById('scannedBarcode').value = data.barcode;
+        console.log("DEBUG: Barcode Scanned:", data);
+    
+    if (data && data.barcode) {
+        // Set the scanned barcode to a hidden input field
+        document.getElementById('scannedBarcode').value = data.barcode;
 
-                // Show the modal when an item is scanned
+        // If the item is "in", show the return date picker
+        $.ajax({
+            url: '/get_item_status',  // Add an endpoint to get item status
+            method: 'GET',
+            data: { barcode: data.barcode },
+            success: function(item) {
+                if (item.status === 'in') {
+                    $('#returnDateContainer').show();  // Show date picker for 'in' status
+                } else {
+                    $('#returnDateContainer').hide();  // Hide date picker for 'out' status
+                }
+                
                 var myModal = new bootstrap.Modal(document.getElementById('checkoutModal'), {
                     keyboard: false
                 });
                 myModal.show();
-            } else {
-                console.log("DEBUG: Invalid data received for barcode scan.");
             }
         });
+    } else {
+        console.log("DEBUG: Invalid data received for barcode scan.");
+    }
+});
 
         // Fetch employees for the dropdown when the modal is opened
         $('#checkoutModal').on('show.bs.modal', function () {
@@ -134,20 +155,20 @@
             });
         });
 
-        // Handle form submission inside the modal
-        $('#checkoutForm').on('submit', function(event) {
-            event.preventDefault();
-            var employeeId = $('#employeeSelect').val();  // Get the selected employee ID
-            var barcode = $('#scannedBarcode').val();      // Get the scanned barcode
+        // Handle form submission with employee ID and optional return date
+            $('#checkoutForm').on('submit', function(event) {
+                event.preventDefault();
+                var employeeId = $('#employeeSelect').val();
+                var barcode = $('#scannedBarcode').val();
+                var expectedReturnDate = $('#expectedReturnDate').val();  // Get the return date
 
-            // Send the employee ID and barcode to the server via WebSocket
-            console.log("DEBUG: Employee ID submitted:", employeeId, "Barcode:", barcode);
-            socket.emit('submit_name', { barcode: barcode, employee_id: employeeId });  // Send employee ID
+                // Send the employee ID, barcode, and expected return date to the server
+                socket.emit('submit_name', { barcode: barcode, employee_id: employeeId, expected_return_date: expectedReturnDate });
+                
+                var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
+                myModal.hide();
+            });
 
-            // Close the modal after submission
-            var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
-            myModal.hide();
-        });
 
         // Function to update the inventory table dynamically
         function updateInventoryTable(items) {
