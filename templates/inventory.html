@@ -6,28 +6,24 @@
     <title>NSSRA Inventory System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
+
     <style>
-           /* Ensure that Select2 dropdown appears above other elements */
-    .select2-container--default .select2-selection--single {
-        z-index: 1051; /* Higher than Bootstrap modals */
-    }
+        /* Adjust Select2 dropdown z-index to appear above modal */
+        .select2-container--default .select2-selection--single {
+            z-index: 1051;
+        }
+        .select2-container--default .select2-results {
+            z-index: 1052;
+        }
 
-    .select2-container--default .select2-selection--multiple {
-        z-index: 1051; /* Higher than Bootstrap modals */
-    }
+        /* Ensure modal remains above the backdrop */
+        .modal {
+            z-index: 1050;
+        }
 
-    .select2-container--default .select2-results {
-        z-index: 1052; /* Higher than Bootstrap modals */
-    }
-
-    /* Adjust Bootstrap modal z-index */
-    .modal {
-        z-index: 1050; /* Ensure modal is below Select2 dropdown */
-    }
-
-    .modal-backdrop {
-        z-index: 1040; /* Ensure backdrop is below Select2 dropdown */
-    }
+        .modal-backdrop {
+            z-index: 1040;
+        }
     </style>
 </head>
 <body>
@@ -53,7 +49,6 @@
                         <td>{{ item.checked_out_by if item.checked_out_by else 'N/A' }}</td>
                         <td>{{ item.timestamp if item.timestamp else 'N/A' }}</td>
                         <td>{{ item.expected_return_date if item.expected_return_date else 'N/A' }}</td> <!-- Show return date -->
-
                     </tr>
                 {% endfor %}
             </tbody>
@@ -101,34 +96,36 @@
 
         // Listen for the 'barcode_scanned' event
         socket.on('barcode_scanned', function(data) {
-        console.log("DEBUG: Barcode Scanned:", data);
-    
-    if (data && data.barcode) {
-        // Set the scanned barcode to a hidden input field
-        document.getElementById('scannedBarcode').value = data.barcode;
+            console.log("DEBUG: Barcode Scanned:", data);
 
-        // If the item is "in", show the return date picker
-        $.ajax({
-            url: '/get_item_status',  // Add an endpoint to get item status
-            method: 'GET',
-            data: { barcode: data.barcode },
-            success: function(item) {
-                if (item.status === 'in') {
-                    $('#returnDateContainer').show();  // Show date picker for 'in' status
-                } else {
-                    $('#returnDateContainer').hide();  // Hide date picker for 'out' status
-                }
-                
-                var myModal = new bootstrap.Modal(document.getElementById('checkoutModal'), {
-                    keyboard: false
+            if (data && data.barcode) {
+                console.log("DEBUG: Data received is valid, showing modal...");
+
+                // Set the scanned barcode to a hidden input field
+                document.getElementById('scannedBarcode').value = data.barcode;
+
+                // Fetch item status to decide whether to show return date field
+                $.ajax({
+                    url: '/get_item_status',
+                    method: 'GET',
+                    data: { barcode: data.barcode },
+                    success: function(item) {
+                        if (item.status === 'in') {
+                            $('#returnDateContainer').show();  // Show date picker for 'in' status
+                        } else {
+                            $('#returnDateContainer').hide();  // Hide date picker for 'out' status
+                        }
+
+                        var myModal = new bootstrap.Modal(document.getElementById('checkoutModal'), {
+                            keyboard: false
+                        });
+                        myModal.show();
+                    }
                 });
-                myModal.show();
+            } else {
+                console.log("DEBUG: Invalid data received for barcode scan.");
             }
         });
-    } else {
-        console.log("DEBUG: Invalid data received for barcode scan.");
-    }
-});
 
         // Fetch employees for the dropdown when the modal is opened
         $('#checkoutModal').on('show.bs.modal', function () {
@@ -136,7 +133,7 @@
                 url: '/get_employees',
                 method: 'GET',
                 success: function(data) {
-                    console.log("DEBUG: Employees fetched:", data); // Log the fetched employees
+                    console.log("DEBUG: Employees fetched:", data);
                     $('#employeeSelect').empty(); // Clear existing options
 
                     // Populate the dropdown with employee data
@@ -146,7 +143,7 @@
 
                     $('#employeeSelect').select2({
                         placeholder: "Select an employee",
-                        allowClear: true // Allows clearing the selection
+                        allowClear: true
                     });
                 },
                 error: function(xhr, status, error) {
@@ -156,51 +153,32 @@
         });
 
         // Handle form submission with employee ID and optional return date
-            $('#checkoutForm').on('submit', function(event) {
-                event.preventDefault();
-                var employeeId = $('#employeeSelect').val();
-                var barcode = $('#scannedBarcode').val();
-                var expectedReturnDate = $('#expectedReturnDate').val();  // Get the return date
+        $('#checkoutForm').on('submit', function(event) {
+            event.preventDefault();
+            var employeeId = $('#employeeSelect').val();
+            var barcode = $('#scannedBarcode').val();
+            var expectedReturnDate = $('#expectedReturnDate').val();  // Get the return date
 
-                // Send the employee ID, barcode, and expected return date to the server
-                socket.emit('submit_name', { barcode: barcode, employee_id: employeeId, expected_return_date: expectedReturnDate });
-                
-                var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
-                myModal.hide();
-            });
+            // Send the employee ID, barcode, and expected return date to the server
+            socket.emit('submit_name', { barcode: barcode, employee_id: employeeId, expected_return_date: expectedReturnDate });
 
+            var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
+            myModal.hide();
+        });
 
         // Function to update the inventory table dynamically
         function updateInventoryTable(items) {
             var tableBody = document.getElementById('inventoryTable');
             tableBody.innerHTML = ''; // Clear existing rows
-            document.getElementById('loadingMessage').style.display = 'block'; // Show loading message
-
-            // Create a map to track the most recent item data
-            var inventoryMap = new Map();
 
             items.forEach(function(item) {
-                // Check if the barcode already exists in the map
-                if (!inventoryMap.has(item.barcode) || 
-                    (item.checkout_timestamp && 
-                    new Date(item.checkout_timestamp) > new Date(inventoryMap.get(item.barcode).checkout_timestamp))) {
-                    // Update the map with the most recent data for this barcode
-                    inventoryMap.set(item.barcode, {
-                        status: item.status,
-                        checked_out_by: item.checked_out_by || 'N/A',
-                        checkout_timestamp: item.checkout_timestamp || 'N/A'
-                    });
-                }
-            });
-
-            // Now iterate through the map to build the table rows
-            inventoryMap.forEach(function(value, barcode) {
                 var row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${barcode}</td>
-                    <td>${value.status}</td>
-                    <td>${value.checked_out_by}</td>
-                    <td>${value.checkout_timestamp}</td>
+                    <td>${item.barcode}</td>
+                    <td>${item.status}</td>
+                    <td>${item.checked_out_by || 'N/A'}</td>
+                    <td>${item.timestamp || 'N/A'}</td>
+                    <td>${item.expected_return_date || 'N/A'}</td>
                 `;
                 tableBody.appendChild(row);
             });
@@ -211,8 +189,7 @@
         // Listen for inventory updates from the server
         socket.on('update_inventory', function(data) {
             console.log("DEBUG: Inventory updated:", data);
-    
-            // Check if data and items are defined
+
             if (data && Array.isArray(data.items)) {
                 updateInventoryTable(data.items); // Update the table with new inventory data
             } else {
