@@ -16,6 +16,14 @@ def add_employee(name, email):
     # Close the connection
     conn.close()
 
+     # Retrieve and print the data from the table
+    cursor.execute('SELECT * FROM employees')
+    rows = cursor.fetchall()
+
+    print("Employees in the database:")
+    for row in rows:
+        print(row)
+
 if __name__ == "__main__":
     # Take employee details from user input
     name = input("Enter employee name: ")
@@ -24,10 +32,4 @@ if __name__ == "__main__":
     # Add the employee to the database
     add_employee(name, email)
 
-# Retrieve and print the data from the table
-    cursor.execute('SELECT * FROM employees')
-    rows = cursor.fetchall()
-
-    print("Employees in the database:")
-    for row in rows:
-        print(row)
+    
