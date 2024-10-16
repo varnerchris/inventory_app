@@ -115,21 +115,26 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
     if item:
         # If the item exists, toggle the status
         new_status = 'out' if item['status'] == 'in' else 'in'
-
+        
         if new_status == 'out':
+            # When checking out, ensure the expected return date is provided
             if not expected_return_date:
                 print("Expected return date is required for check-out.")
-                return
+                return  # Exit if no return date is provided
         else:
+            # When checking in, clear the expected return date
             expected_return_date = None  # Clear return date when checking in
     else:
-        # If the item does not exist, insert it
-        new_status = 'out'
+        # If the item does not exist, it means it's a new entry (create action)
+        new_status = 'in'  # Mark the new item as 'in'
+        action = 'create'
+        
+        # Ensure expected_return_date is provided for the new item being checked out
         if not expected_return_date:
             print("Expected return date is required for new item check-out.")
             return
         
-        # Insert the new item into the inventory table
+        # Insert the new item into the inventory table with status 'in'
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
                        (barcode, new_status, checked_out_by, expected_return_date))
 
@@ -144,6 +149,7 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
 
     conn.commit()
     conn.close()
+
 
 
 
@@ -231,10 +237,12 @@ def get_item_status():
         return jsonify({
             'status': item['status'],
             'checked_out_by': item['checked_out_by'],
-            'expected_return_date': item['expected_return_date'] or 'N/A'  # Return expected return date
+            'expected_return_date': item['expected_return_date'] or 'N/A'
         })
     else:
+        print(f"DEBUG: Item with barcode {barcode} not found in inventory.")
         return jsonify({'error': 'Item not found'}), 404
+
 
 # Route to get employee names and emails for the dropdown
 @app.route('/get_employees', methods=['GET'])
