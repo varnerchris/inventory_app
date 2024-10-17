@@ -55,7 +55,7 @@ def get_inventory_data():
         SELECT 
             i.barcode, 
             i.status, 
-            e.name AS checked_out_by,  -- Join with employees table to get the employee name
+            l.checked_out_by, 
             l.timestamp AS checkout_timestamp,
             i.expected_return_date  -- Include expected return date
         FROM inventory i
@@ -68,20 +68,17 @@ def get_inventory_data():
                 WHERE sublog.barcode = checkout_log.barcode
             )
         ) l ON i.barcode = l.barcode
-        LEFT JOIN employees e ON l.checked_out_by = e.id  -- Join with employees table
     ''').fetchall()
-
-    # Debug: Log fetched items
+ # Debug: Log fetched items
     print("DEBUG: Fetched items from the database:")
     for item in items:
         print({
             'barcode': item['barcode'],
             'status': item['status'],
-            'checked_out_by': item['checked_out_by'],  # This now refers to the employee name
+            'checked_out_by': item['checked_out_by'],
             'checkout_timestamp': item['checkout_timestamp'],
             'expected_return_date': item['expected_return_date']
         })
-
     # Create a list to hold the inventory state
     inventory = []
 
@@ -95,8 +92,7 @@ def get_inventory_data():
         })
 
     conn.close()
-    return {'items': inventory}  # Make sure the return statement is here
-
+    return {'items': inventory}
 
 
 
@@ -347,20 +343,21 @@ def get_inventory_data():
         SELECT 
             i.barcode, 
             i.status, 
-            l.checked_out_by, 
+            e.name AS checked_out_by,  -- Get employee name instead of ID
             l.timestamp AS checkout_timestamp,
             i.expected_return_date  -- Include expected return date
-
         FROM 
             inventory i
         LEFT JOIN 
-            (SELECT barcode, checked_out_by, timestamp 
-             FROM checkout_log 
-             WHERE (barcode, timestamp) IN (
-                 SELECT barcode, MAX(timestamp) 
-                 FROM checkout_log 
-                 GROUP BY barcode
-             )) l ON i.barcode = l.barcode
+            checkout_log l ON i.barcode = l.barcode
+        LEFT JOIN 
+            employees e ON l.checked_out_by = e.id  -- Join with employees table to get employee name
+        WHERE 
+            l.timestamp = (
+                SELECT MAX(timestamp) 
+                FROM checkout_log AS sublog 
+                WHERE sublog.barcode = l.barcode
+            )
     ''').fetchall()
     
     # Convert to a list of dictionaries for easier manipulation on the client
@@ -372,7 +369,6 @@ def get_inventory_data():
             'checked_out_by': item['checked_out_by'] if item['checked_out_by'] else 'N/A',  # Handle NULL values
             'checkout_timestamp': item['checkout_timestamp'] if item['checkout_timestamp'] else 'N/A',  # Handle NULL values
             'expected_return_date': item['expected_return_date'] if item['expected_return_date'] else 'N/A'  # Handle NULL values
-
         })
     
     conn.close()
