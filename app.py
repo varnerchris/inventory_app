@@ -222,6 +222,7 @@ def handle_scan(barcode):
 
 
 # WebSocket event for handling name submission
+# WebSocket event for handling name submission
 @socketio.on('submit_name')
 def handle_name_submission(data):
     barcode = data['barcode']
@@ -242,8 +243,12 @@ def handle_name_submission(data):
         # If the item exists, determine the new status
         new_status = 'out' if item['status'] == 'in' else 'in'  # Toggle status
 
+        if new_status == 'in':
+            # Clear the expected return date when checking in
+            expected_return_date = None  
+
         # Update the inventory with new status, checked out by, expected return date, and timestamp
-        cursor.execute('''
+        cursor.execute(''' 
             UPDATE inventory 
             SET status = ?, checked_out_by = ?, checkout_timestamp = ?, expected_return_date = ? 
             WHERE barcode = ?
