@@ -237,11 +237,15 @@
 socket.on('update_inventory', function(data) {
     console.log("DEBUG: Inventory updated:", data);
     if (data && Array.isArray(data.items)) {
-        updateInventoryTable(data.items); // Update the table with new inventory data
+        // Add a 3-second delay before updating the inventory table
+        setTimeout(function() {
+            updateInventoryTable(data.items); // Update the table with new inventory data
+        }, 3000); // 3000 milliseconds = 3 seconds
     } else {
         console.error("DEBUG: Invalid data structure received:", data);
     }
 });
+
 
     </script>
     
