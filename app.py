@@ -213,13 +213,23 @@ def handle_name_submission(data):
     item = cursor.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
 
     if item:
-        # If the item exists, update it
-        cursor.execute('UPDATE inventory SET checked_out_by = ?, checkout_timestamp = CURRENT_TIMESTAMP, expected_return_date = ? WHERE barcode = ?',
-                       (employee_id, expected_return_date, barcode))
+        # If the item exists, determine the new status
+        new_status = 'out' if item['status'] == 'in' else 'in'  # Toggle status
+
+        # Update the inventory with new status, checked out by, expected return date, and timestamp
+        cursor.execute('''
+            UPDATE inventory 
+            SET status = ?, checked_out_by = ?, checkout_timestamp = CURRENT_TIMESTAMP, expected_return_date = ? 
+            WHERE barcode = ?
+        ''', (new_status, employee_id, expected_return_date, barcode))
+        
+        print(f"DEBUG: Updated item {barcode}: new_status={new_status}, checked_out_by={employee_id}, expected_return_date={expected_return_date}")
+
     else:
-        # If the item does not exist, insert it with default values
+        # If the item does not exist, create it with default values
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
                        (barcode, 'in', employee_id, expected_return_date))
+        print(f"DEBUG: New item {barcode} added to inventory with status 'in'.")
 
     # Commit the transaction and close the connection
     conn.commit()
@@ -227,6 +237,7 @@ def handle_name_submission(data):
 
     # Emit the updated inventory to all connected clients
     emit('update_inventory', get_inventory_data(), broadcast=True)
+
 
 
 
