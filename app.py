@@ -249,12 +249,22 @@ def handle_name_submission(data):
             WHERE barcode = ?
         ''', (new_status, employee_id, checkout_timestamp, expected_return_date, barcode))
         
+        # Log the checkout or check-in action in the checkout_log
+        action = 'checkout' if new_status == 'out' else 'checkin'
+        cursor.execute('INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)', 
+                       (barcode, action, employee_id, checkout_timestamp))
+
         print(f"DEBUG: Updated item {barcode}: new_status={new_status}, checked_out_by={employee_id}, expected_return_date={expected_return_date}, checkout_timestamp={checkout_timestamp}")
 
     else:
         # If the item does not exist, create it with default values
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
                        (barcode, 'in', employee_id, expected_return_date))
+        
+        # Log the creation action in the checkout_log
+        action = 'create'
+        cursor.execute('INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)', 
+                       (barcode, action, 'system', checkout_timestamp))
         print(f"DEBUG: New item {barcode} added to inventory with status 'in'.")
 
     # Commit the transaction and close the connection
@@ -263,6 +273,7 @@ def handle_name_submission(data):
 
     # Emit the updated inventory to all connected clients
     emit('update_inventory', get_inventory_data(), broadcast=True)
+
 
 
 
