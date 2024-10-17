@@ -226,7 +226,7 @@ def handle_name_submission(data):
             WHERE barcode = ?
         ''', (new_status, employee_id, checkout_timestamp, expected_return_date, barcode))
         
-        print(f"DEBUG: Updated item {barcode}: new_status={new_status}, checked_out_by={employee_id}, expected_return_date={expected_return_date}")
+        print(f"DEBUG: Updated item {barcode}: new_status={new_status}, checked_out_by={employee_id}, expected_return_date={expected_return_date}, checkout_timestamp={checkout_timestamp}")
 
     else:
         # If the item does not exist, create it with default values
