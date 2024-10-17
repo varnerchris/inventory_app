@@ -361,8 +361,10 @@ def get_inventory_data():
     ''').fetchall()
     
     # Debug: Print raw items fetched from the database
-    print("DEBUG: Raw items fetched from database:", items)
-    
+    print("DEBUG: Raw items fetched from database:")
+    for item in items:
+        print(dict(item))  # Convert each Row object to a dictionary for clearer output
+
     # Convert to a list of dictionaries for easier manipulation on the client
     inventory_items = []
     for item in items:
@@ -379,6 +381,7 @@ def get_inventory_data():
 
     conn.close()
     return {'items': inventory_items}  # Return as a dictionary with 'items' key for consistency
+
 
 
 
