@@ -95,7 +95,27 @@ def process_barcode(scanner):
                 # When 'Enter' key is detected, barcode is complete
                 if key == 'KEY_ENTER':
                     print(f"DEBUG: Barcode scanned: {barcode}")
-                    socketio.emit('barcode_scanned', {'barcode': barcode})
+                    
+                    # Check if the item already exists in the inventory
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    item = cursor.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
+                    conn.close()
+
+                    if item:
+                        # If the item exists, emit barcode to client-side to trigger the modal
+                        socketio.emit('barcode_scanned', {'barcode': barcode})
+                    else:
+                        # If the item doesn't exist, create it with default values
+                        print(f"DEBUG: Creating new item in inventory: {barcode}")
+                        conn = get_db_connection()
+                        cursor = conn.cursor()
+                        cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
+                                       (barcode, 'in', 'system', 'N/A'))
+                        conn.commit()
+                        conn.close()
+                        print(f"DEBUG: New item {barcode} added to inventory.")
+
                     barcode = ''  # Reset for the next scan
                 else:
                     # Add key to barcode string
@@ -104,6 +124,8 @@ def process_barcode(scanner):
 
 
 
+
+# Function to toggle the state of an item
 # Function to toggle the state of an item
 def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
     conn = get_db_connection()
@@ -136,7 +158,7 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
         
         # Insert the new item into the inventory table with status 'in'
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
-                       (barcode, 'created', 'system', 'N/A'))
+                       (barcode, 'in', checked_out_by, expected_return_date))
 
     # Insert the action into the checkout_log
     timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -149,6 +171,7 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
 
     conn.commit()
     conn.close()
+
 
 
 
@@ -172,13 +195,17 @@ def handle_name_submission(data):
     employee_id = data['employee_id']
     expected_return_date = data.get('expected_return_date')  # Get expected return date
 
+    # Establish the database connection
     conn = get_db_connection()
+    
+    # Create a cursor object
+    cursor = conn.cursor()
 
     # Check if the item exists
-    item = conn.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
+    item = cursor.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
 
     if item:
-        # If item exists, update it
+        # If the item exists, update it
         cursor.execute('UPDATE inventory SET checked_out_by = ?, checkout_timestamp = CURRENT_TIMESTAMP, expected_return_date = ? WHERE barcode = ?',
                        (employee_id, expected_return_date, barcode))
     else:
@@ -186,9 +213,11 @@ def handle_name_submission(data):
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
                        (barcode, 'in', employee_id, expected_return_date))
 
+    # Commit the transaction and close the connection
     conn.commit()
     conn.close()
 
+    # Emit the updated inventory to all connected clients
     emit('update_inventory', get_inventory_data(), broadcast=True)
 
 
@@ -235,6 +264,7 @@ def inventory():
     return render_template('inventory.html', items=items_list)
 
 # Route to GET item Status
+# Route to GET item Status
 @app.route('/get_item_status', methods=['GET'])
 def get_item_status():
     barcode = request.args.get('barcode')
@@ -249,8 +279,8 @@ def get_item_status():
             'expected_return_date': item['expected_return_date'] or 'N/A'
         })
     else:
-        # Return a response indicating the item does not exist
-        return jsonify({'status': None}), 404  # Indicate item does not exist
+        # Skip modal, item is newly created
+        return jsonify({'status': 'new_item'}), 200  # Indicate it's a new item and skip status lookup
 
 
 # Route to get employee names and emails for the dropdown
