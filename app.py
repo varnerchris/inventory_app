@@ -51,32 +51,40 @@ def get_inventory_data():
     cursor = conn.cursor()
 
     # Fetch all inventory data and latest checkout information
-    items = cursor.execute('''
-        SELECT i.barcode, i.status, l.checked_out_by, l.timestamp AS checkout_timestamp
+    items = cursor.execute(''' 
+        SELECT 
+            i.barcode, 
+            i.status, 
+            l.checked_out_by, 
+            l.timestamp AS checkout_timestamp,
+            i.expected_return_date  -- Include expected return date
         FROM inventory i
-        LEFT JOIN checkout_log l ON i.barcode = l.barcode
-        ORDER BY l.timestamp DESC
+        LEFT JOIN (
+            SELECT barcode, checked_out_by, timestamp
+            FROM checkout_log
+            WHERE timestamp = (
+                SELECT MAX(timestamp)
+                FROM checkout_log AS sublog
+                WHERE sublog.barcode = checkout_log.barcode
+            )
+        ) l ON i.barcode = l.barcode
     ''').fetchall()
 
-    # Create a dictionary to hold the most recent inventory state
-    inventory_dict = {}
+    # Create a list to hold the inventory state
+    inventory = []
 
     for item in items:
-        barcode = item['barcode']
-
-        # Update the dictionary with the latest checkout information
-        if barcode not in inventory_dict or (item['checkout_timestamp'] and item['checkout_timestamp'] > inventory_dict[barcode]['checkout_timestamp']):
-            inventory_dict[barcode] = {
-                'status': item['status'],
-                'checked_out_by': item['checked_out_by'] or 'N/A',
-                'checkout_timestamp': item['checkout_timestamp'] or 'N/A'
-            }
-
-    # Convert the dictionary back to a list
-    inventory = [{'barcode': barcode, **data} for barcode, data in inventory_dict.items()]
+        inventory.append({
+            'barcode': item['barcode'],
+            'status': item['status'],
+            'checked_out_by': item['checked_out_by'] or 'N/A',
+            'checkout_timestamp': item['checkout_timestamp'] or 'N/A',
+            'expected_return_date': item['expected_return_date'] or 'N/A'  # Include expected return date
+        })
 
     conn.close()
     return {'items': inventory}
+
 
 
 
