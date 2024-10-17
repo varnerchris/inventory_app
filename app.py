@@ -169,9 +169,6 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
         print(f"DEBUG: New item {barcode} added to inventory.")
 
         barcode = ''  # Reset for the next scan
-        else:
-        # Add key to barcode string
-        barcode += key[-1]
 
     # Insert the action into the checkout_log
     timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -276,7 +273,6 @@ def inventory():
 
     return render_template('inventory.html', items=items_list)
 
-# Route to GET item Status
 # Route to GET item Status
 @app.route('/get_item_status', methods=['GET'])
 def get_item_status():
