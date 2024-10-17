@@ -69,7 +69,16 @@ def get_inventory_data():
             )
         ) l ON i.barcode = l.barcode
     ''').fetchall()
-
+ # Debug: Log fetched items
+    print("DEBUG: Fetched items from the database:")
+    for item in items:
+        print({
+            'barcode': item['barcode'],
+            'status': item['status'],
+            'checked_out_by': item['checked_out_by'],
+            'checkout_timestamp': item['checkout_timestamp'],
+            'expected_return_date': item['expected_return_date']
+        })
     # Create a list to hold the inventory state
     inventory = []
 
