@@ -371,23 +371,23 @@ def get_inventory_data():
         SELECT 
             i.barcode, 
             i.status, 
-            e.name AS checked_out_by,  
+            e.name AS checked_out_by,  -- Get employee name instead of ID
             l.timestamp AS checkout_timestamp,
-            i.expected_return_date  
+            i.expected_return_date  -- Include expected return date
         FROM 
             inventory i
         LEFT JOIN 
-            (SELECT barcode, checked_out_by, timestamp 
-             FROM checkout_log 
-             WHERE (barcode, timestamp) IN (
-                 SELECT barcode, MAX(timestamp) 
-                 FROM checkout_log 
-                 GROUP BY barcode
-             )) l ON i.barcode = l.barcode
+            checkout_log l ON i.barcode = l.barcode
         LEFT JOIN 
-            employees e ON l.checked_out_by = e.id  
+            employees e ON l.checked_out_by = e.id  -- Join with employees table to get employee name
+        WHERE 
+            l.timestamp = (
+                SELECT MAX(timestamp) 
+                FROM checkout_log AS sublog 
+                WHERE sublog.barcode = l.barcode
+            )
     ''').fetchall()
-
+    
     # Debug: Print raw items fetched from the database
     print("DEBUG: Raw items fetched from database:")
     for item in items:
@@ -409,7 +409,6 @@ def get_inventory_data():
 
     conn.close()
     return {'items': inventory_items}  # Return as a dictionary with 'items' key for consistency
-
 
 
 
