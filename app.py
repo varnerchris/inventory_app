@@ -251,7 +251,7 @@ def inventory():
     
     # Query to get only the most recent checkout_log entry for each barcode
     items = conn.execute(''' 
-        SELECT i.id, i.barcode, i.status, l.checked_out_by, l.timestamp
+        SELECT i.id, i.barcode, i.status, l.checked_out_by, l.timestamp, i.expected_return_date
         FROM inventory i
         LEFT JOIN (
             SELECT barcode, checked_out_by, timestamp
@@ -273,7 +273,8 @@ def inventory():
             'barcode': item['barcode'],
             'status': item['status'],
             'checked_out_by': item['checked_out_by'],
-            'timestamp': item['timestamp']
+            'timestamp': item['timestamp'],
+            'expected_return_date': item['expected_return_date']  # Include expected return date
         })
 
     conn.close()
@@ -282,6 +283,7 @@ def inventory():
     print("DEBUG: Items fetched from database:", items_list)
 
     return render_template('inventory.html', items=items_list)
+
 
 # Route to GET item Status
 @app.route('/get_item_status', methods=['GET'])
