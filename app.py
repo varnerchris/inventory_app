@@ -153,44 +153,49 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
     if item:
         # If the item exists, toggle the status
         new_status = 'out' if item['status'] == 'in' else 'in'
-        
+
         if new_status == 'out':
             # When checking out, ensure the expected return date is provided
             if not expected_return_date:
                 print("Expected return date is required for check-out.")
                 return  # Exit if no return date is provided
+            
+            # Insert the action into the checkout_log for checkout
+            action = 'checkout'
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            cursor.execute('INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)',
+                           (barcode, action, checked_out_by, timestamp))
+
         else:
             # When checking in, clear the expected return date
             expected_return_date = None  # Clear return date when checking in
+            action = 'checkin'
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            cursor.execute('INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)',
+                           (barcode, action, checked_out_by, timestamp))
+    
     else:
         # If the item does not exist, it means it's a new entry (create action)
         new_status = 'in'  # Mark the new item as 'in'
         action = 'create'
         
-        # Ensure expected_return_date is provided for the new item being checked out
-        if not expected_return_date:
-            print("Expected return date is required for new item check-out.")
-            return
-        
         # Insert the new item into the inventory table with status 'in'
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
-                       (barcode, 'in', checked_out_by, expected_return_date))
-        
+                       (barcode, new_status, checked_out_by, expected_return_date))
+
+        # Insert the action into the checkout_log for create
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute('INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)',
+                       (barcode, action, 'system', timestamp))
+
         # Emit a `new_item` event to the frontend
         socketio.emit('new_item', {
             'barcode': barcode,
             'status': 'in',
             'checked_out_by': 'system',
-            'expected_return_date': 'N/A'
+            'expected_return_date': expected_return_date or 'N/A'
         })
         print(f"DEBUG: New item {barcode} added to inventory.")
-
-        barcode = ''  # Reset for the next scan
-
-    # Insert the action into the checkout_log
-    timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-    cursor.execute('INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)',
-                   (barcode, action if not item else 'checkout', checked_out_by, timestamp))
 
     # Update the inventory table with the new status, checked out by, and expected return date
     cursor.execute('UPDATE inventory SET status = ?, checked_out_by = ?, checkout_timestamp = ?, expected_return_date = ? WHERE barcode = ?', 
@@ -198,6 +203,7 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
 
     conn.commit()
     conn.close()
+
 
 
 
