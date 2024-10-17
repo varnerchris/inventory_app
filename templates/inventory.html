@@ -236,16 +236,13 @@
 // Listen for inventory updates from the server
 socket.on('update_inventory', function(data) {
     console.log("DEBUG: Inventory updated:", data);
-
     if (data && Array.isArray(data.items)) {
-        // Add a delay before updating the inventory table
-        setTimeout(function() {
-            updateInventoryTable(data.items); // Update the table with new inventory data
-        }, 500); // Delay in milliseconds (adjust as needed)
+        updateInventoryTable(data.items); // Update the table with new inventory data
     } else {
         console.error("DEBUG: Invalid data structure received:", data);
     }
 });
+
     </script>
     
     <!-- Add a hidden input field for the scanned barcode -->
