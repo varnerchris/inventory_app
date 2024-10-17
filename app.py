@@ -51,51 +51,52 @@ def get_inventory_data():
     cursor = conn.cursor()
 
     # Fetch all inventory data and latest checkout information
-items = cursor.execute(''' 
-    SELECT 
-        i.barcode, 
-        i.status, 
-        e.name AS checked_out_by,  -- Join with employees table to get the employee name
-        l.checkout_timestamp,
-        i.expected_return_date  -- Include expected return date
-    FROM inventory i
-    LEFT JOIN (
-        SELECT barcode, checked_out_by, timestamp
-        FROM checkout_log
-        WHERE timestamp = (
-            SELECT MAX(timestamp)
-            FROM checkout_log AS sublog
-            WHERE sublog.barcode = checkout_log.barcode
-        )
-    ) l ON i.barcode = l.barcode
-    LEFT JOIN employees e ON l.checked_out_by = e.id  -- Join with employees table
-''').fetchall()
+    items = cursor.execute(''' 
+        SELECT 
+            i.barcode, 
+            i.status, 
+            e.name AS checked_out_by,  -- Join with employees table to get the employee name
+            l.timestamp AS checkout_timestamp,
+            i.expected_return_date  -- Include expected return date
+        FROM inventory i
+        LEFT JOIN (
+            SELECT barcode, checked_out_by, timestamp
+            FROM checkout_log
+            WHERE timestamp = (
+                SELECT MAX(timestamp)
+                FROM checkout_log AS sublog
+                WHERE sublog.barcode = checkout_log.barcode
+            )
+        ) l ON i.barcode = l.barcode
+        LEFT JOIN employees e ON l.checked_out_by = e.id  -- Join with employees table
+    ''').fetchall()
 
-# Debug: Log fetched items
-print("DEBUG: Fetched items from the database:")
-for item in items:
-    print({
-        'barcode': item['barcode'],
-        'status': item['status'],
-        'checked_out_by': item['checked_out_by'],  # This now refers to the employee name
-        'checkout_timestamp': item['checkout_timestamp'],
-        'expected_return_date': item['expected_return_date']
-    })
+    # Debug: Log fetched items
+    print("DEBUG: Fetched items from the database:")
+    for item in items:
+        print({
+            'barcode': item['barcode'],
+            'status': item['status'],
+            'checked_out_by': item['checked_out_by'],  # This now refers to the employee name
+            'checkout_timestamp': item['checkout_timestamp'],
+            'expected_return_date': item['expected_return_date']
+        })
 
-# Create a list to hold the inventory state
-inventory = []
+    # Create a list to hold the inventory state
+    inventory = []
 
-for item in items:
-    inventory.append({
-        'barcode': item['barcode'],
-        'status': item['status'],
-        'checked_out_by': item['checked_out_by'] or 'N/A',
-        'checkout_timestamp': item['checkout_timestamp'] or 'N/A',
-        'expected_return_date': item['expected_return_date'] or 'N/A'  # Include expected return date
-    })
+    for item in items:
+        inventory.append({
+            'barcode': item['barcode'],
+            'status': item['status'],
+            'checked_out_by': item['checked_out_by'] or 'N/A',
+            'checkout_timestamp': item['checkout_timestamp'] or 'N/A',
+            'expected_return_date': item['expected_return_date'] or 'N/A'  # Include expected return date
+        })
 
-conn.close()
-return {'items': inventory}
+    conn.close()
+    return {'items': inventory}  # Make sure the return statement is here
+
 
 
 
