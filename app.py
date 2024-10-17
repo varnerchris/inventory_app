@@ -136,7 +136,7 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
         
         # Insert the new item into the inventory table with status 'in'
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
-                       (barcode, new_status, checked_out_by, expected_return_date))
+                       (barcode, 'created', 'system', 'N/A'))
 
     # Insert the action into the checkout_log
     timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
