@@ -47,7 +47,7 @@
                         <td>{{ item.barcode }}</td>
                         <td>{{ item.status }}</td>
                         <td>{{ item.checked_out_by if item.checked_out_by else 'N/A' }}</td>
-                        <td>{{ item.timestamp if item.timestamp else 'N/A' }}</td>
+                        <td>{{ item.checkout_timestamp if item.checkout_timestamp else 'N/A' }}</td>
                         <td>{{ item.expected_return_date if item.expected_return_date else 'N/A' }}</td> <!-- Show return date -->
                     </tr>
                 {% endfor %}
@@ -237,15 +237,11 @@
 socket.on('update_inventory', function(data) {
     console.log("DEBUG: Inventory updated:", data);
     if (data && Array.isArray(data.items)) {
-        // Add a 3-second delay before updating the inventory table
-        setTimeout(function() {
-            updateInventoryTable(data.items); // Update the table with new inventory data
-        }, 3000); // 3000 milliseconds = 3 seconds
+        updateInventoryTable(data.items); // Update the table with new inventory data
     } else {
         console.error("DEBUG: Invalid data structure received:", data);
     }
 });
-
 
     </script>
     
