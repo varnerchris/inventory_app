@@ -126,7 +126,6 @@ def process_barcode(scanner):
 
 
 # Function to toggle the state of an item
-# Function to toggle the state of an item
 def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -159,6 +158,20 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
         # Insert the new item into the inventory table with status 'in'
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
                        (barcode, 'in', checked_out_by, expected_return_date))
+        
+        # Emit a `new_item` event to the frontend
+        socketio.emit('new_item', {
+            'barcode': barcode,
+            'status': 'in',
+            'checked_out_by': 'system',
+            'expected_return_date': 'N/A'
+        })
+        print(f"DEBUG: New item {barcode} added to inventory.")
+
+        barcode = ''  # Reset for the next scan
+        else:
+        # Add key to barcode string
+        barcode += key[-1]
 
     # Insert the action into the checkout_log
     timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
