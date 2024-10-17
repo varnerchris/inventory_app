@@ -242,16 +242,12 @@ def handle_name_submission(data):
         # If the item exists, determine the new status
         new_status = 'out' if item['status'] == 'in' else 'in'  # Toggle status
 
-        if new_status == 'in':
-            # Clear the expected return date when checking in
-            expected_return_date = None  
-
         # Update the inventory with new status, checked out by, expected return date, and timestamp
-        cursor.execute(''' 
+        cursor.execute('''
             UPDATE inventory 
             SET status = ?, checked_out_by = ?, checkout_timestamp = ?, expected_return_date = ? 
             WHERE barcode = ?
-        ''', (new_status, employee_id, checkout_timestamp, expected_return_date, barcode))
+        ''', (new_status, employee_id, checkout_timestamp, expected_return_date if new_status == 'out' else None, barcode))
         
         # Log the checkout or check-in action in the checkout_log
         action = 'checkout' if new_status == 'out' else 'checkin'
@@ -277,6 +273,7 @@ def handle_name_submission(data):
 
     # Emit the updated inventory to all connected clients
     emit('update_inventory', get_inventory_data(), broadcast=True)
+
 
 
 
