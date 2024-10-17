@@ -209,25 +209,25 @@ def handle_name_submission(data):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Get the current timestamp
-    checkout_timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-
     # Check if the item exists
     item = cursor.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
 
+    # Get the current timestamp
+    checkout_timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+
     if item:
-        # If the item exists, update it
+        # If the item exists, determine the new status
+        new_status = 'out' if item['status'] == 'in' else 'in'  # Toggle status
+
+        # Update the inventory with new status, checked out by, expected return date, and timestamp
         cursor.execute('''
             UPDATE inventory 
-            SET 
-                checked_out_by = ?, 
-                checkout_timestamp = ?, 
-                expected_return_date = ? 
-            WHERE 
-                barcode = ?
-        ''', (employee_id, checkout_timestamp, expected_return_date, barcode))
+            SET status = ?, checked_out_by = ?, checkout_timestamp = ?, expected_return_date = ? 
+            WHERE barcode = ?
+        ''', (new_status, employee_id, checkout_timestamp, expected_return_date, barcode))
         
-        print(f"DEBUG: Updated item {barcode}: checked_out_by={employee_id}, checkout_timestamp={checkout_timestamp}, expected_return_date={expected_return_date}")
+        print(f"DEBUG: Updated item {barcode}: new_status={new_status}, checked_out_by={employee_id}, expected_return_date={expected_return_date}")
+
     else:
         # If the item does not exist, create it with default values
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
