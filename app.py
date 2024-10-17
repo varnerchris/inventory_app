@@ -360,6 +360,9 @@ def get_inventory_data():
             )
     ''').fetchall()
     
+    # Debug: Print raw items fetched from the database
+    print("DEBUG: Raw items fetched from database:", items)
+    
     # Convert to a list of dictionaries for easier manipulation on the client
     inventory_items = []
     for item in items:
@@ -371,6 +374,9 @@ def get_inventory_data():
             'expected_return_date': item['expected_return_date'] if item['expected_return_date'] else 'N/A'  # Handle NULL values
         })
     
+    # Debug: Print the structured inventory items
+    print("DEBUG: Structured inventory items:", inventory_items)
+
     conn.close()
     return {'items': inventory_items}  # Return as a dictionary with 'items' key for consistency
 
