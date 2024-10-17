@@ -111,11 +111,11 @@
                     data: { barcode: data.barcode },
                     success: function(item) {
                         // Check the item status and decide whether to show the return date
-                        if (item.status === 'out') {
-                            $('#returnDateContainer').show();  // Show date picker for 'out' status
+                        if (item.status === 'in') {
+                            $('#returnDateContainer').show();  // Show date picker for 'in' status
                         } else {
                             console.log("DEBUG: Hiding return date input.");
-                            $('#returnDateContainer').hide();  // Hide date picker for 'in' status
+                            $('#returnDateContainer').hide();  // Hide date picker for 'out' status
                         }
 
                         // Now show the modal
@@ -134,7 +134,6 @@
                 console.log("DEBUG: Invalid data received for barcode scan.");
             }
         });
-
 
         // Listen for 'new_item' event for new items added to the inventory
         socket.on('new_item', function(data) {
