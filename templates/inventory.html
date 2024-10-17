@@ -180,30 +180,37 @@
             });
         });
 
-  // Handle form submission with employee ID and expected return date
-$('#checkoutForm').on('submit', function(event) {
-    event.preventDefault(); // Prevent the default form submission
-    var employeeId = $('#employeeSelect').val(); // Get the selected employee ID
-    var barcode = $('#scannedBarcode').val(); // Get the scanned barcode
-    var expectedReturnDate = $('#expectedReturnDate').val(); // Get the expected return date
+        // Handle form submission with employee ID and expected return date
+        $('#checkoutForm').on('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+            var employeeId = $('#employeeSelect').val(); // Get the selected employee ID
+            var barcode = $('#scannedBarcode').val(); // Get the scanned barcode
+            var expectedReturnDate = $('#expectedReturnDate').val(); // Get the expected return date
 
-    // Check if expected return date is needed (only for 'out' status)
-    if (expectedReturnDate) {
-        // Send the employee ID, barcode, and expected return date to the server
-        console.log("DEBUG: Sending data to server:", { 
-        socket.emit('submit_name', { 
-            barcode: barcode, 
-            employee_id: employeeId, 
-            expected_return_date: expectedReturnDate 
+            // Check if expected return date is needed (only for 'out' status)
+            if (expectedReturnDate) {
+                // Log the data being sent to the server
+                console.log("DEBUG: Sending data to server:", { 
+                    barcode: barcode, 
+                    employee_id: employeeId, 
+                    expected_return_date: expectedReturnDate 
+                });
+
+                // Send the employee ID, barcode, and expected return date to the server
+                socket.emit('submit_name', { 
+                    barcode: barcode, 
+                    employee_id: employeeId, 
+                    expected_return_date: expectedReturnDate 
+                });
+            } else {
+                console.log("DEBUG: Expected return date is not provided.");
+            }
+
+            // Hide the modal after submission
+            var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
+            myModal.hide();
         });
-    } else {
-        console.log("DEBUG: Expected return date is not provided.");
-    }
 
-    // Hide the modal after submission
-    var myModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
-    myModal.hide();
-});
 
 
         // Function to update the inventory table dynamically
