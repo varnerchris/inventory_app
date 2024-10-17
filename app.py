@@ -285,9 +285,14 @@ def handle_name_submission(data):
 def inventory():
     conn = get_db_connection()
     
-    # Query to get only the most recent checkout_log entry for each barcode
+    # Query to get the most recent checkout_log entry for each barcode, including employee names
     items = conn.execute(''' 
-        SELECT i.id, i.barcode, i.status, l.checked_out_by, l.timestamp, i.expected_return_date  -- Include expected return date
+        SELECT i.id, 
+               i.barcode, 
+               i.status, 
+               e.name AS checked_out_by,  -- Get employee name instead of ID
+               l.timestamp, 
+               i.expected_return_date  -- Include expected return date
         FROM inventory i
         LEFT JOIN (
             SELECT barcode, checked_out_by, timestamp
@@ -298,6 +303,7 @@ def inventory():
                 WHERE sublog.barcode = checkout_log.barcode
             )
         ) l ON i.barcode = l.barcode
+        LEFT JOIN employees e ON l.checked_out_by = e.id  -- Join with employees table to get employee name
         ORDER BY l.timestamp DESC;
     ''').fetchall()
 
@@ -308,7 +314,7 @@ def inventory():
             'id': item['id'],
             'barcode': item['barcode'],
             'status': item['status'],
-            'checked_out_by': item['checked_out_by'],
+            'checked_out_by': item['checked_out_by'] if item['checked_out_by'] else 'N/A',  # Handle NULL values
             'timestamp': item['timestamp'],
             'expected_return_date': item['expected_return_date']  # Include expected return date
         })
@@ -319,6 +325,7 @@ def inventory():
     print("DEBUG: Items fetched from database:", items_list)
 
     return render_template('inventory.html', items=items_list)
+
 
 
 # Route to GET item Status
