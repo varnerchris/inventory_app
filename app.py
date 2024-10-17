@@ -205,10 +205,7 @@ def handle_name_submission(data):
     employee_id = data['employee_id']
     expected_return_date = data.get('expected_return_date')  # Get expected return date
 
-    # Establish the database connection
     conn = get_db_connection()
-    
-    # Create a cursor object
     cursor = conn.cursor()
 
     # Check if the item exists
@@ -223,11 +220,9 @@ def handle_name_submission(data):
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
                        (barcode, 'in', employee_id, expected_return_date))
 
-    # Commit the transaction and close the connection
     conn.commit()
     conn.close()
 
-    # Emit the updated inventory to all connected clients
     emit('update_inventory', get_inventory_data(), broadcast=True)
 
 
