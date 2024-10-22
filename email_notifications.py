@@ -10,12 +10,9 @@ MAILGUN_DOMAIN = os.getenv("MAILGUN_DOMAIN")
 MAILGUN_FROM_EMAIL = os.getenv("MAILGUN_FROM_EMAIL")
 MAILGUN_TO_EMAIL = os.getenv("MAILGUN_TO_EMAIL")
 
-print(MAILGUN_API_KEY)
-
-
 # Function to send email
 def send_notification(barcode, expected_return_date):
-    return requests.post(
+    response = requests.post(
         f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages",
         auth=("api", MAILGUN_API_KEY),
         data={
@@ -25,14 +22,11 @@ def send_notification(barcode, expected_return_date):
             "text": f"Item with barcode {barcode} was expected to be returned on {expected_return_date}, but is still checked out."
         }
     )
-# Example usage for testing
-def test_send_email():
-    subject = "Test Email from Raspberry Pi"
-    message = "This is a test email to check the email notification system."
-    response = send_notification(subject, message)
-    print(response.status_code)
-    print(response.text)
 
-    # Call the test function
-if __name__ == "__main__":
-    test_send_email()
+    # Debugging output
+    if response.status_code == 200:
+        print(f"Email sent successfully for item {barcode}!")
+    else:
+        print(f"Failed to send email for item {barcode}. Status code: {response.status_code}, Response: {response.text}")
+
+    return response
