@@ -155,10 +155,10 @@ def process_barcode(scanner):
                 key = evdev.ecodes.KEY[key_event.scancode]
 
                 # Debugging: print key event information
-                print(f"DEBUG: Key pressed: {key}")
+                print(f"DEBUG: Key pressed: {key} (scancode: {key_event.scancode})")
 
                 # Ignore the Shift keys
-                if key == 'KEY_LEFTSHIFT' or key == 'KEY_RIGHTSHIFT':
+                if key in ['KEY_LEFTSHIFT', 'KEY_RIGHTSHIFT']:
                     print(f"DEBUG: Ignoring {key}")
                     continue
 
@@ -180,8 +180,10 @@ def process_barcode(scanner):
                         print(f"DEBUG: Creating new item in inventory: {barcode}")
                         conn = get_db_connection()
                         cursor = conn.cursor()
-                        cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
-                                       (barcode, 'in', 'system', 'N/A'))
+                        cursor.execute(
+                            'INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
+                            (barcode, 'in', 'system', 'N/A')
+                        )
                         conn.commit()
                         conn.close()
                         print(f"DEBUG: New item {barcode} added to inventory.")
@@ -191,10 +193,13 @@ def process_barcode(scanner):
 
                 else:
                     # Add valid alphanumeric keys to the barcode string
+                    print(f"DEBUG: Key value: {key}, Length: {len(key)}, Is Alnum: {key.isalnum()}")
                     if len(key) == 1 and key.isalnum():
                         barcode += key.lower()
+                        print(f"DEBUG: Updated barcode: {barcode}")
                     else:
                         print(f"DEBUG: Ignoring non-alphanumeric key: {key}")
+
 
 
 
