@@ -148,6 +148,8 @@ def process_barcode(scanner):
     barcode = ''
     print("DEBUG: Starting barcode processing...")
 
+    shift_pressed = False  # Track if the shift key is pressed
+
     for event in scanner.read_loop():
         if event.type == evdev.ecodes.EV_KEY:
             key_event = evdev.categorize(event)
@@ -156,6 +158,11 @@ def process_barcode(scanner):
 
                 # Debugging: print key event information
                 print(f"DEBUG: Key pressed: {key}")
+
+                # Detect and handle the Shift key
+                if key == 'KEY_LEFTSHIFT' or key == 'KEY_RIGHTSHIFT':
+                    shift_pressed = True
+                    continue
 
                 # When 'Enter' key is detected, barcode is complete
                 if key == 'KEY_ENTER':
@@ -183,12 +190,23 @@ def process_barcode(scanner):
 
                     # Reset the barcode string for the next scan
                     barcode = ''
+                    shift_pressed = False  # Reset the shift tracking
+
                 else:
-                    # Filter out unwanted key presses (e.g., Shift, Alt, etc.)
-                    if len(key) == 1 and key.isalnum():  # Only append alphanumeric characters
-                        barcode += key.upper()  # Convert to uppercase for consistency
+                    # Filter out unwanted key presses and handle shift-modified characters
+                    if len(key) == 1 and key.isalnum():
+                        # If shift is pressed, capitalize the character (if needed)
+                        if shift_pressed:
+                            barcode += key.upper()
+                        else:
+                            barcode += key.lower()
                     else:
                         print(f"DEBUG: Ignoring non-alphanumeric key: {key}")
+
+                # Reset the shift flag if needed
+                if key_event.keystate == key_event.key_up and (key == 'KEY_LEFTSHIFT' or key == 'KEY_RIGHTSHIFT'):
+                    shift_pressed = False
+
 
 
 
