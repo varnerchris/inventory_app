@@ -5,6 +5,8 @@ import time
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_socketio import SocketIO, emit
 import threading
+from email_notifications import send_notification
+from datetime import datetime
 
 # Initialize Flask app and SocketIO
 app = Flask(__name__)
@@ -410,6 +412,27 @@ def get_inventory_data():
 
 
 
+# Function to check if items are overdue and send an email
+def check_overdue_items():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get all items where the current date is past the expected return date and the item is still checked out
+    overdue_items = cursor.execute('''
+        SELECT barcode, expected_return_date 
+        FROM inventory 
+        WHERE status = 'out' 
+        AND expected_return_date IS NOT NULL 
+        AND DATE(expected_return_date) < DATE('now')
+    ''').fetchall()
+    
+    for item in overdue_items:
+        barcode = item['barcode']
+        expected_return_date = item['expected_return_date']
+        # Send email notification for overdue item
+        send_notification(barcode, expected_return_date)
+    
+    conn.close()
 
 
 
