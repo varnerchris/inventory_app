@@ -26,6 +26,6 @@ def send_notification(barcode, expected_return_date):
 def test_send_email():
     subject = "Test Email from Raspberry Pi"
     message = "This is a test email to check the email notification system."
-    response = send_email_notification(subject, message)
+    response = send_notification(subject, message)
     print(response.status_code)
     print(response.text)
