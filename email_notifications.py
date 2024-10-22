@@ -10,6 +10,9 @@ MAILGUN_DOMAIN = os.getenv("MAILGUN_DOMAIN")
 MAILGUN_FROM_EMAIL = os.getenv("MAILGUN_FROM_EMAIL")
 MAILGUN_TO_EMAIL = os.getenv("MAILGUN_TO_EMAIL")
 
+print(MAILGUN_API_KEY)
+
+
 # Function to send email
 def send_notification(barcode, expected_return_date):
     return requests.post(
@@ -29,3 +32,7 @@ def test_send_email():
     response = send_notification(subject, message)
     print(response.status_code)
     print(response.text)
+
+    # Call the test function
+if __name__ == "__main__":
+    test_send_email()
