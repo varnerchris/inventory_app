@@ -417,20 +417,23 @@ def check_overdue_items():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Get all items where the current date is past the expected return date and the item is still checked out
+    # Query to get overdue items and the email of the person who checked them out
     overdue_items = cursor.execute('''
-        SELECT barcode, expected_return_date 
-        FROM inventory 
-        WHERE status = 'out' 
-        AND expected_return_date IS NOT NULL 
-        AND DATE(expected_return_date) < DATE('now')
+        SELECT i.barcode, i.expected_return_date, e.email
+        FROM inventory i
+        JOIN employees e ON i.checked_out_by = e.id
+        WHERE i.status = 'out' 
+        AND i.expected_return_date IS NOT NULL 
+        AND DATE(i.expected_return_date) < DATE('now')
     ''').fetchall()
     
     for item in overdue_items:
         barcode = item['barcode']
         expected_return_date = item['expected_return_date']
+        email = item['email']
+
         # Send email notification for overdue item
-        send_notification(barcode, expected_return_date)
+        send_notification(barcode, expected_return_date, email)
     
     conn.close()
 
