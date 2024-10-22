@@ -96,10 +96,12 @@ def get_inventory_data():
     conn.close()
     return {'items': inventory}
 
+# Function to process barcode scan
 
 
 
 
+""" #OLD
 # Function to process barcode scan
 def process_barcode(scanner):
     barcode = ''
@@ -139,6 +141,54 @@ def process_barcode(scanner):
                 else:
                     # Add key to barcode string
                     barcode += key[-1]
+"""
+
+# Function to process barcode scan
+def process_barcode(scanner):
+    barcode = ''
+    print("DEBUG: Starting barcode processing...")
+
+    for event in scanner.read_loop():
+        if event.type == evdev.ecodes.EV_KEY:
+            key_event = evdev.categorize(event)
+            if key_event.keystate == key_event.key_down:
+                key = evdev.ecodes.KEY[key_event.scancode]
+
+                # Debugging: print key event information
+                print(f"DEBUG: Key pressed: {key}")
+
+                # When 'Enter' key is detected, barcode is complete
+                if key == 'KEY_ENTER':
+                    print(f"DEBUG: Barcode scanned: {barcode}")
+
+                    # Check if the item already exists in the inventory
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    item = cursor.execute('SELECT * FROM inventory WHERE barcode = ?', (barcode,)).fetchone()
+                    conn.close()
+
+                    if item:
+                        # If the item exists, emit barcode to client-side to trigger the modal
+                        socketio.emit('barcode_scanned', {'barcode': barcode})
+                    else:
+                        # If the item doesn't exist, create it with default values
+                        print(f"DEBUG: Creating new item in inventory: {barcode}")
+                        conn = get_db_connection()
+                        cursor = conn.cursor()
+                        cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
+                                       (barcode, 'in', 'system', 'N/A'))
+                        conn.commit()
+                        conn.close()
+                        print(f"DEBUG: New item {barcode} added to inventory.")
+
+                    # Reset the barcode string for the next scan
+                    barcode = ''
+                else:
+                    # Filter out unwanted key presses (e.g., Shift, Alt, etc.)
+                    if len(key) == 1 and key.isalnum():  # Only append alphanumeric characters
+                        barcode += key.upper()  # Convert to uppercase for consistency
+                    else:
+                        print(f"DEBUG: Ignoring non-alphanumeric key: {key}")
 
 
 
