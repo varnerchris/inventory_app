@@ -22,3 +22,10 @@ def send_notification(barcode, expected_return_date):
             "text": f"Item with barcode {barcode} was expected to be returned on {expected_return_date}, but is still checked out."
         }
     )
+# Example usage for testing
+def test_send_email():
+    subject = "Test Email from Raspberry Pi"
+    message = "This is a test email to check the email notification system."
+    response = send_email_notification(subject, message)
+    print(response.status_code)
+    print(response.text)
