@@ -192,13 +192,17 @@ def process_barcode(scanner):
                     barcode = ''
 
                 else:
-                    # Add valid alphanumeric keys to the barcode string
-                    print(f"DEBUG: Key value: {key}, Length: {len(key)}, Is Alnum: {key.isalnum()}")
-                    if len(key) == 1 and key.isalnum():
-                        barcode += key.lower()
-                        print(f"DEBUG: Updated barcode: {barcode}")
+                    # Convert key name to the actual character
+                    char = None
+                    if key.startswith('KEY_'):
+                        # Remove 'KEY_' prefix to get the character
+                        char = key.split('KEY_')[-1].lower()
+                        if len(char) == 1:  # If it's a single character
+                            barcode += char
+                            print(f"DEBUG: Updated barcode: {barcode}")
                     else:
                         print(f"DEBUG: Ignoring non-alphanumeric key: {key}")
+
 
 
 
