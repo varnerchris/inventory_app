@@ -154,17 +154,15 @@ def process_barcode(scanner):
             if key_event.keystate == key_event.key_down:
                 key = evdev.ecodes.KEY[key_event.scancode]
 
-                # Debugging: print key event information
-                print(f"DEBUG: Key pressed: {key} (scancode: {key_event.scancode})")
+                
 
                 # Ignore the Shift keys
                 if key in ['KEY_LEFTSHIFT', 'KEY_RIGHTSHIFT']:
-                    print(f"DEBUG: Ignoring {key}")
                     continue
 
                 # When 'Enter' key is detected, barcode is complete
                 if key == 'KEY_ENTER':
-                    print(f"DEBUG: Barcode scanned: {barcode}")
+                    
 
                     # Check if the item already exists in the inventory
                     conn = get_db_connection()
@@ -200,8 +198,6 @@ def process_barcode(scanner):
                         if len(char) == 1:  # If it's a single character
                             barcode += char
                             print(f"DEBUG: Updated barcode: {barcode}")
-                    else:
-                        print(f"DEBUG: Ignoring non-alphanumeric key: {key}")
 
 
 
@@ -246,7 +242,7 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
     else:
         # If the item does not exist, it means it's a new entry (create action)
         new_status = 'in'  # Mark the new item as 'in'
-        action = 'checkin'
+        action = 'create'
         
         # Insert the new item into the inventory table with status 'in'
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
