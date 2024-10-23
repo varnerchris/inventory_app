@@ -246,7 +246,7 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
     else:
         # If the item does not exist, it means it's a new entry (create action)
         new_status = 'in'  # Mark the new item as 'in'
-        action = 'create'
+        action = 'checkin'
         
         # Insert the new item into the inventory table with status 'in'
         cursor.execute('INSERT INTO inventory (barcode, status, checked_out_by, expected_return_date) VALUES (?, ?, ?, ?)', 
@@ -255,7 +255,7 @@ def toggle_item_state(barcode, checked_out_by, expected_return_date=None):
         # Insert the action into the checkout_log for create
         timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute('INSERT INTO checkout_log (barcode, action, checked_out_by, timestamp) VALUES (?, ?, ?, ?)',
-                       (barcode, action, checked_out_by, timestamp))
+                       (barcode, action, 'system', timestamp))
 
         # Emit a `new_item` event to the frontend
         socketio.emit('new_item', {
