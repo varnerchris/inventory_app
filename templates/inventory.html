@@ -164,9 +164,11 @@
                     console.log("DEBUG: Employees fetched:", data);
                     $('#employeeSelect').empty(); // Clear existing options
 
-                    // Populate the dropdown with employee data
+                    // Populate the dropdown with active employees only
                     data.forEach(function(employee) {
-                        $('#employeeSelect').append(new Option(employee.text, employee.id));
+                        if (employee.active) { // Ensure only active employees are shown
+                            $('#employeeSelect').append(new Option(employee.text, employee.id));
+                        }
                     });
 
                     $('#employeeSelect').select2({
@@ -225,31 +227,36 @@
 
         // Function to update the inventory table dynamically
         function updateInventoryTable(items) {
-                    var tableBody = document.getElementById('inventoryTable');
-                    tableBody.innerHTML = ''; // Clear existing rows
+            var tableBody = document.getElementById('inventoryTable');
+            tableBody.innerHTML = ''; // Clear existing rows
 
-                    items.forEach(function(item) {
-                        var row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${item.barcode}</td>
-                            <td>${item.status}</td>
-                            <td>${item.checked_out_by || 'N/A'}</td>
-                            <td>${item.checkout_timestamp || 'N/A'}</td>
-                            <td>${item.expected_return_date || 'N/A'}</td>
-                        `;
-                        tableBody.appendChild(row);
-                        // Debug: Log each row being added
-                        console.log("DEBUG: Added row:", {
-                            barcode: item.barcode,
-                            status: item.status,
-                            checked_out_by: item.checked_out_by || 'N/A',
-                            timestamp: item.checkout_timestamp,
-                            expected_return_date: item.expected_return_date || 'N/A'
-                        });
-                    });
+            items.forEach(function(item) {
+                // Check if the employee is inactive
+                const checkedOutBy = item.checked_out_by || 'N/A';
+                const isInactive = checkedOutBy.includes('(Inactive)'); // Assume backend marks inactive employees
 
-                    document.getElementById('loadingMessage').style.display = 'none'; // Hide loading message
-                }
+                var row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.barcode}</td>
+                    <td>${item.status}</td>
+                    <td style="${isInactive ? 'color: red;' : ''}">${checkedOutBy}</td>
+                    <td>${item.checkout_timestamp || 'N/A'}</td>
+                    <td>${item.expected_return_date || 'N/A'}</td>
+                `;
+                tableBody.appendChild(row);
+
+                // Debug: Log each row being added
+                console.log("DEBUG: Added row:", {
+                    barcode: item.barcode,
+                    status: item.status,
+                    checked_out_by: checkedOutBy,
+                    timestamp: item.checkout_timestamp,
+                    expected_return_date: item.expected_return_date || 'N/A'
+                });
+            });
+
+            document.getElementById('loadingMessage').style.display = 'none'; // Hide loading message
+        }
 
     </script>
     

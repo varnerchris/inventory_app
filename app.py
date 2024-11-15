@@ -417,12 +417,11 @@ def get_item_status():
 @app.route('/get_employees', methods=['GET'])
 def get_employees():
     conn = get_db_connection()
-    employees = conn.execute('SELECT id, name, email FROM employees').fetchall()
+    employees = conn.execute('SELECT id, name, email, active FROM employees').fetchall()
     conn.close()
     
-    # Format data for Select2: id and text fields
-    employee_list = [{'id': emp['id'], 'text': f"{emp['name']} ({emp['email']})"} for emp in employees]
-    
+    # Format data for Select2: id, text, and active status
+    employee_list = [{'id': emp['id'], 'text': f"{emp['name']} ({emp['email']})", 'active': emp['active']} for emp in employees]
     return jsonify(employee_list)
 
 
