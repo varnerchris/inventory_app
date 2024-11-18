@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import sqlite3
 import requests
 from dotenv import load_dotenv
