@@ -432,6 +432,7 @@ def get_inventory_data():
     
     items = conn.execute('''
         SELECT 
+            i.description,
             i.barcode, 
             i.status, 
             e.name AS checked_out_by,  -- Get employee name instead of ID
@@ -461,6 +462,7 @@ def get_inventory_data():
     for item in items:
         inventory_items.append({
             'barcode': item['barcode'],
+            'description': item['description'],
             'status': item['status'],
             'checked_out_by': item['checked_out_by'] if item['checked_out_by'] else 'N/A',  # Handle NULL values
             'checkout_timestamp': item['checkout_timestamp'] if item['checkout_timestamp'] else 'N/A',  # Handle NULL values
