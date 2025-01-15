@@ -354,6 +354,7 @@ def inventory():
     # Query to get the most recent checkout_log entry for each barcode, including employee names
     items = conn.execute(''' 
         SELECT i.id, 
+                i.description,
                i.barcode, 
                i.status, 
                e.name AS checked_out_by,  -- Get employee name instead of ID
@@ -378,6 +379,7 @@ def inventory():
     for item in items:
         items_list.append({
             'id': item['id'],
+            'description' : item['description'],
             'barcode': item['barcode'],
             'status': item['status'],
             'checked_out_by': item['checked_out_by'] if item['checked_out_by'] else 'N/A',  # Handle NULL values

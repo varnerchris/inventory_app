@@ -152,6 +152,7 @@
             var newRow = document.createElement('tr');
 
             newRow.innerHTML = `
+            <td>${data.description}</td>
                 <td>${data.barcode}</td>
                 <td>${data.status}</td>
                 <td>${data.checked_out_by || 'N/A'}</td>
@@ -245,7 +246,8 @@
 
                 var row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${item.barcode}</td>
+                <td>${item.description}</td>    
+                <td>${item.barcode}</td>
                     <td>${item.status}</td>
                     <td style="${isInactive ? 'color: red;' : ''}">${checkedOutBy}</td>
                     <td>${item.checkout_timestamp || 'N/A'}</td>
